@@ -20,5 +20,10 @@ If you have any objections, please create an issue.
 | you | คุณ | เธอว์, เธอ, เทอ, ท่าน, นาย, เจ้า, ผู้อ่าน | This word is not too formal or informal. |
 | framework | เฟรมเวอร์ค | เฟรมเวิร์ค, เฟรมเวิร์ก | <http://thaiglossary.org/search/framework> |
 | commit | คอมมิท | การทำความผิด, การมอบหมายให้, การถูกบังคับ, คะมิท' | Thai dictionaries does not recognize "commit" as a noun, only a verb, so none of the translation makes sense. The word here is also a technical term, so we need to make up our own transliteration, based on the word "คอมมิชชั่น (commission)". |
+| client | ไคลเอนต์ | ไคลแอนต์, ไคลเอนท์, ไคลแอนท์ | <http://thaiglossary.org/search/client> |
+| server | เซิร์ฟเวอร์ | เซอร์เวอร์ | <http://thaiglossary.org/search/server> |
+| web | เว็บ | เวป, เว็ป, เวฟ, เวบ | <http://thaiglossary.org/search/web> |
+| application | แอปพลิเคชัน | แอปพลิเคชั่น, แอพพลิเคชั่น | The proposed Thai word seems to be the official word. |
+| app | แอพ | แอป | Now, the word "App" seems to only come recently. On Google, the word แอพ is more frequently used than แอป. |
 
 We put the words not to use so that they can easily be grepped.
