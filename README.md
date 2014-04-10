@@ -7,13 +7,32 @@ This is a Thai version of the book Discover Meteor.
 * This book uses a lot of technical terms. Some terms, when translated to Thai language, does not make any sense, and will be transliterated instead.
 
 
-How to Translate Certain Words
-------------------------------
+Translation Guideline for Thai Language
+---------------------------------------
 
-Thai language is complex, and there are many words to refer to the same things. There are many possible translations, or even transliterations of the same English word.
+Thai language is complex, and there are many words to refer to the same things.
+There are many possible translations, or even transliterations of the same English word.
 
 So this guideline is for maintaining consistency in word usage throughout the book.
 If you have any objections, please create an issue.
+
+
+### On Technical Terms
+
+Most technical terms will be transliterated (in other words, written in karaoke language)
+if there is no suitable Thai translation for it,
+in order to keep the reading flow
+and for easy distinguishing of _proper nouns_, which will be written as-is.
+
+
+### On Using a Full Stop
+
+A full stop will be put at the end of the sentence if it ends with an English word
+and precedes another sentence.
+
+
+
+### Word Usage Guideline
 
 | English word | Thai word to use | Don't use these words | Rationale |
 | ------------ | ---------------- | --------------------- | --------- |
@@ -25,5 +44,7 @@ If you have any objections, please create an issue.
 | web | เว็บ | เวป, เว็ป, เวฟ, เวบ | <http://thaiglossary.org/search/web> |
 | application | แอปพลิเคชัน | แอปพลิเคชั่น, แอพพลิเคชั่น | The proposed Thai word seems to be the official word. |
 | app | แอพ | แอป | Now, the word "App" seems to only come recently. On Google, the word แอพ is more frequently used than แอป. |
+| collection | คอลเลกชัน | คอลเลคชั่น, คอลเลคชัน, คอลเลกชั่น | <http://www.royin.go.th/th/webboardnew/answer.php?GroupID=&searchKey=&searchFrom=&searchTo=&PageShow=6&TopView=&QID=11115> |
+
 
 We put the words not to use so that they can easily be grepped.
