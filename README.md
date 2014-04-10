@@ -45,6 +45,6 @@ and precedes another sentence.
 | application | แอปพลิเคชัน | แอปพลิเคชั่น, แอพพลิเคชั่น | The proposed Thai word seems to be the official word. |
 | app | แอพ | แอป | Now, the word "App" seems to only come recently. On Google, the word แอพ is more frequently used than แอป. |
 | collection | คอลเลกชัน | คอลเลคชั่น, คอลเลคชัน, คอลเลกชั่น | <http://www.royin.go.th/th/webboardnew/answer.php?GroupID=&searchKey=&searchFrom=&searchTo=&PageShow=6&TopView=&QID=11115> |
-
+| deployment | การดีพลอย | การแปรแถว, การสถาปนากำลัง, การใช้งาน, การเคลื่อนพล | Deployment, when translated to Thai, has a militaristic meaning and makes no sense in computer term, so we transliterate it. |
 
 We put the words not to use so that they can easily be grepped.

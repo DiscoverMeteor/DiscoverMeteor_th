@@ -1,5 +1,5 @@
 ---
-title: Notifications
+title: การแจ้งเตือน (Notifications)
 slug: notifications
 date: 0011/01/01
 number: 11
@@ -57,10 +57,10 @@ Meteor.methods({
 
     // create the comment, save the id
     comment._id = Comments.insert(comment);
-    
+
     // now create a notification, informing the user that there's been a comment
     createCommentNotification(comment);
-    
+
     return comment._id;
   }
 });
@@ -83,7 +83,7 @@ Meteor.publish('notifications', function() {
 Router.configure({
   layoutTemplate: 'layout',
   loadingTemplate: 'loading',
-  waitOn: function() { 
+  waitOn: function() {
     return [Meteor.subscribe('posts'), Meteor.subscribe('notifications')]
   }
 });

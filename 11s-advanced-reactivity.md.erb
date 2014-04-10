@@ -1,5 +1,5 @@
 ---
-title: Advanced Reactivity
+title: Reactivity ขั้นสูง
 slug: advanced-reactivity
 date: 0011/01/02
 number: 11.5
@@ -21,7 +21,7 @@ currentLikeCount = 0;
 Meteor.setInterval(function() {
   var postId;
   if (Meteor.user() && postId = Session.get('currentPostId')) {
-    getFacebookLikeCount(Meteor.user(), Posts.find(postId), 
+    getFacebookLikeCount(Meteor.user(), Posts.find(postId),
       function(err, count) {
         if (!err)
           currentLikeCount = count;
@@ -64,7 +64,7 @@ currentLikeCount = function() {
 Meteor.setInterval(function() {
   var postId;
   if (Meteor.user() && postId = Session.get('currentPostId')) {
-    getFacebookLikeCount(Meteor.user(), Posts.find(postId), 
+    getFacebookLikeCount(Meteor.user(), Posts.find(postId),
       function(err, count) {
         if (!err && count !== _currentLikeCount) {
           _currentLikeCount = count;
@@ -124,7 +124,7 @@ $rootScope.$watch('currentLikeCount', function(likeCount) {
 
 ~~~js
 Meteor.setInterval(function() {
-  getFacebookLikeCount(Meteor.user(), Posts.find(postId), 
+  getFacebookLikeCount(Meteor.user(), Posts.find(postId),
     function(err, count) {
       if (!err) {
         $rootScope.currentLikeCount = count;

@@ -1,5 +1,5 @@
 ---
-title: Publications and Subscriptions
+title: การเผยแพร่ข้อมูล และการรอรับข้อมูล (Publications and Subscriptions)
 slug: publications-and-subscriptions
 date: 0004/01/02
 number: 4.5
@@ -59,7 +59,7 @@ paragraphs: 52
 ~~~js
 // on the server
 Meteor.publish('posts', function() {
-  return Posts.find({flagged: false}); 
+  return Posts.find({flagged: false});
 });
 ~~~
 
@@ -140,7 +140,7 @@ Template.posts.helpers({
 
 ////
 
-~~~js 
+~~~js
 Meteor.publish('allPosts', function(){
   return Posts.find();
 });
@@ -154,7 +154,7 @@ Meteor.publish('allPosts', function(){
 
 ////
 
-~~~js 
+~~~js
 Meteor.publish('somePosts', function(){
   return Posts.find({'author':'Tom'});
 });
