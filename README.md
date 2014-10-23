@@ -37,7 +37,7 @@ and precedes another sentence.
 | English word | Thai word to use | Don't use these words | Rationale |
 | ------------ | ---------------- | --------------------- | --------- |
 | you | คุณ | เธอว์, เธอ, เทอ, ท่าน, นาย, เจ้า, ผู้อ่าน | This word is not too formal or informal. |
-| framework | เฟรมเวอร์ค | เฟรมเวิร์ค, เฟรมเวิร์ก | <http://thaiglossary.org/search/framework> |
+| framework | เฟรมเวิร์ก | เฟรมเวิร์ค, เฟรมเวอร์ค | <http://www.wikiwand.com/th/%E0%B9%80%E0%B8%9F%E0%B8%A3%E0%B8%A1%E0%B9%80%E0%B8%A7%E0%B8%B4%E0%B8%A3%E0%B9%8C%E0%B8%81>, [Discussion](https://github.com/DiscoverMeteor/DiscoverMeteor_th/pull/2#issuecomment-60218784) |
 | commit | คอมมิท | การทำความผิด, การมอบหมายให้, การถูกบังคับ, คะมิท' | Thai dictionaries does not recognize "commit" as a noun, only a verb, so none of the translation makes sense. The word here is also a technical term, so we need to make up our own transliteration, based on the word "คอมมิชชั่น (commission)". |
 | client | ไคลเอนต์ | ไคลแอนต์, ไคลเอนท์, ไคลแอนท์ | <http://thaiglossary.org/search/client> |
 | server | เซิร์ฟเวอร์ | เซอร์เวอร์ | <http://thaiglossary.org/search/server> |
