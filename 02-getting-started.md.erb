@@ -1,80 +1,35 @@
 ---
-title: เริ่มต้นกับ Meteor (Getting Started)
+title: เริ่มต้นกับ Meteor
 slug: getting-started
 date: 0002/01/01
 number: 2
-contents: Install Meteor & Meteorite.|Learn about the 5 types of Meteor packages.|Setup the file structure of your Meteor app.
+contents: ติดตั้ง Meteor|รู้จักกับแพคเกจ Meteor แบบต่างๆ|จัดโครงสร้างโฟลเดอร์ให้แอพ Meteor ของคุณ.
 paragraphs: 49
 ---
 
-////
+Meteor จะทำให้คุณประทับใจตั้งแต่ตอนติดตั้งครั้งแรก เพียงแค่ไม่เกินห้านาที ก็พร้อมใช้งานได้แล้ว
 
-////
+เริ่มต้นโดยเปิดโปรแกรม Terminal และป้อนคำสั่งนี้
 
 ~~~bash
 $ curl https://install.meteor.com | sh
 ~~~
 
-////
+Meteor ก็จะถูกติดตั้งและพร้อมใช้งานบนเครื่องคุณได้ทันที
 
 <% note do %>
 
 ### *Not* Installing Meteor
 
-////
+ถ้าคุณไม่สามารถติดตั้ง (หรือไม่ต้องการติดตั้ง) Meteor ลงบนเครื่องคุณ คุณก็น่าจะลองใช้ [Nitrous.io](http://nitrous.io) ดูนะ
 
-////
+Nitrous.io เป็นบริการที่ช่วยให้คุณสามารถรันแอพและแก้ไขโค้ดจากเบราว์เซอร์ได้โดยตรง ซึ่งทางเราได้เตรียม[คู่มือการใช้งานฉบับย่อ](https://www.discovermeteor.com/blog/meteor-nitrous)ไว้ให้แล้ว
 
-////
-
-<% end %>
-
-### Meteorite
-
-////
-
-////
-
-### Installing Meteorite
-
-////
-
-- [Node download site](http://nodejs.org/download/)
-- [Git download site](http://git-scm.com/downloads)
-
-////
-
-~~~bash
-$ npm install -g meteorite
-~~~
-
-<% note do %>
-
-### Permission errors?
-
-////
-
-~~~bash
-$ sudo -H npm install -g meteorite
-~~~
-
-////
+คุณแค่ทำตามคู่มือนั้นจนจบหัวข้อ "Installing Meteor" แล้วก็กลับมาอ่านต่อที่หัวข้อ "ลองสร้างแอพแบบง่ายๆกัน" ในบทนี้ได้เลย
 
 <% end %>
 
-////
-
-////
-
-<% note do %>
-
-  ### `mrt` vs `meteor`
-
-////
-
-<% end %>
-
-### Creating a Simple App
+### ลองสร้างแอพแบบง่ายๆกัน
 
 ////
 
@@ -85,10 +40,10 @@ $ mrt create microscope
 ////
 
 ~~~bash
-microscope.css
-microscope.html
-microscope.js
-smart.json
+.meteor
+microscope.css  
+microscope.html 
+microscope.js   
 ~~~
 
 ////
@@ -108,15 +63,42 @@ $ meteor
 
 ////
 
+////
+
+<% note do %>
+
+### Bye Bye Meteorite
+
+////
+
+////
+
+<% end %>
+
 ### Adding a Package
 
 ////
 
+////
+
+////
+
+////
+
 ~~~bash
-$ mrt add bootstrap
+meteor add mizzao:bootstrap-3
+meteor add underscore
 ~~~
 
-<%= commit "2-2", "Added bootstrap package." %>
+////
+
+<%= commit "2-2", "Added bootstrap and underscore packages." %>
+
+////
+
+<%= screenshot "2-1b", "With Bootstrap." %>
+
+////
 
 <% note do %>
 
