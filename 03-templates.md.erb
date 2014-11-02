@@ -3,15 +3,15 @@ title: เทมเพลต (Templates)
 slug: templates
 date: 0003/01/01
 number: 3
-contents: Learn about Meteor's templating language, Handlebars.|Create your first three templates.|Learn how Meteor managers work.|Get a basic prototype working with static data.
+contents: เรียนรู้วิธีใช้เทมเพลตด้วย Spacebars|สร้างเทมเพลตสามตัวแรกของคุณ|เข้าใจว่า Meteor จัดการสิ่งต่างๆ ได้อย่างไร|สร้างแอพต้นแบบที่ทำงานกับข้อมูลง่ายๆ
 paragraphs: 46
 ---
 
-////
+เพื่อให้สร้างแอพได้ง่ายขึ้น เราจะนำวิธีการแบบ outside-in มาใช้ โดยเริ่มจากการสร้างเปลือกนอกของแอพด้วยไฟล์ HTML และจาวาสคริปต์ก่อน จากนั้นก็เขียนโค้ดเพิ่มเข้าไป เพื่อให้มันทำงานได้
 
-////
+โดยในบทนี้ เราจะเน้นเฉพาะสิ่งที่เกิดขึ้นในโฟลเดอร์ `/client` เท่านั้น
 
-////
+แรกสุดให้คุณสร้างไฟล์ `main.html` (หรือเปิดจากที่คุณสร้างไว้แล้ว) ในโฟลเดอร์ `/client`  และเขียนโค้ดต่อไปนี้ลงไป :
 
 ~~~html
 <head>
@@ -32,7 +32,7 @@ paragraphs: 46
 ~~~
 <%= caption "client/main.html" %>
 
-////
+ไฟล์นี้จะถูกใช้เป็นเทมเพลตหลักของแอพ ที่คุณเห็นในไฟล์ก็คือ HTML แทบทั้งหมด ยกเว้นตรง `{{> postList}}`  ซึ่งเป็นจุดที่ Meteor จะแทรกเทมเพลต `postsList` เข้าไป จากตรงนี้เราก็จะสร้างเทพเพลตเพิ่มอีกสองสามตัว
 
 ### Meteor Templates
 
