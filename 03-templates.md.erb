@@ -102,7 +102,7 @@ Meteor เก่งในเรื่องการค้นหาไฟล์ 
 
 ส่วนในเทมเพลท `postItem` ก็ไม่มีอะไรซับซ้อน มันใช้แค่ 3 นิพจน์ คือ `{{url}}` และ `{{title}}` ที่ดึงค่ามาจากเรื่องที่โพสท์ และ `{{domain}}` ที่ได้ค่ามาจากตัวช่วยเทมเพลท 
 
-### Template Managers
+### Template Helpers
 
 ////
 
@@ -112,9 +112,7 @@ Meteor เก่งในเรื่องการค้นหาไฟล์ 
 
 <% note do %>
 
-### Managers?
-
-////
+### Controllers?
 
 ////
 
@@ -128,17 +126,14 @@ Meteor เก่งในเรื่องการค้นหาไฟล์ 
 var postsData = [
   {
     title: 'Introducing Telescope',
-    author: 'Sacha Greif',
     url: 'http://sachagreif.com/introducing-telescope/'
-  },
+  }, 
   {
     title: 'Meteor',
-    author: 'Tom Coleman',
     url: 'http://meteor.com'
-  },
+  }, 
   {
     title: 'The Meteor Book',
-    author: 'Tom Coleman',
     url: 'http://themeteorbook.com'
   }
 ];
@@ -151,8 +146,6 @@ Template.postsList.helpers({
 ////
 
 <%= screenshot "3-1", "Our first templates with static data" %>
-
-<%= commit "3-1", "Added basic posts list template and static data." %>
 
 ////
 
@@ -173,7 +166,9 @@ Template.postsList.helpers({
 
 ////
 
-### The Value of "this"
+<%= commit "3-1", "Added basic posts list template and static data." %>
+
+### The `domain` Helper
 
 ////
 
@@ -188,8 +183,6 @@ Template.postItem.helpers({
 ~~~
 <%= caption "client/views/posts/post_item.js" %>
 
-<%= commit "3-2", "Setup a `domain` helper on the `postItem`." %>
-
 ////
 
 <%= screenshot "3-2", "Displaying domains for each links." %>
@@ -201,6 +194,8 @@ Template.postItem.helpers({
 ////
 
 ////
+
+<%= commit "3-2", "Setup a `domain` helper on the `postItem`." %>
 
 <% note do %>
 
