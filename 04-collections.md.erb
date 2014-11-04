@@ -17,18 +17,12 @@ paragraphs: 72
 
 ////
 
-////
-
-////
-
 ~~~js
 Posts = new Meteor.Collection('posts');
 ~~~
-<%= caption "collections/posts.js" %>
+<%= caption "lib/collections/posts.js" %>
 
 <%= commit "4-1", "Added a posts collection" %>
-
-////
 
 <% note do %>
 
@@ -37,6 +31,22 @@ Posts = new Meteor.Collection('posts');
 ////
 
 <% end %>
+
+### Storing Data
+
+////
+
+- ////
+- ////
+- ////
+
+////
+
+### Client & Server
+
+////
+
+////
 
 ////
 
@@ -127,6 +137,8 @@ Posts = new Meteor.Collection('posts');
 
 ////
 
+////
+
 ~~~bash
 > db.posts.find();
 {title: "A new post", _id: ObjectId("..")};
@@ -176,13 +188,9 @@ Posts = new Meteor.Collection('posts');
 
 ////
 
-### Keeping it Real-time
-
-////
-
-////
-
 ### Populating the Database
+
+////
 
 ////
 
@@ -198,23 +206,26 @@ $ meteor reset
 
 ////
 
+~~~bash
+meteor
+~~~
+
+////
+
 ~~~js
 if (Posts.find().count() === 0) {
   Posts.insert({
     title: 'Introducing Telescope',
-    author: 'Sacha Greif',
     url: 'http://sachagreif.com/introducing-telescope/'
   });
-
+  
   Posts.insert({
     title: 'Meteor',
-    author: 'Tom Coleman',
     url: 'http://meteor.com'
   });
-
+  
   Posts.insert({
     title: 'The Meteor Book',
-    author: 'Tom Coleman',
     url: 'http://themeteorbook.com'
   });
 }
@@ -227,7 +238,7 @@ if (Posts.find().count() === 0) {
 
 ////
 
-### Wiring the data to our HTML with helpers
+### Dynamic Data
 
 ////
 
@@ -235,6 +246,8 @@ if (Posts.find().count() === 0) {
 ❯ Posts.find().fetch();
 ~~~
 <%= caption "Browser console" %>
+
+////
 
 ////
 
