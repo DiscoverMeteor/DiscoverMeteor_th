@@ -22,8 +22,8 @@ paragraphs: 27
 เราอาจเลือกใช้แพ็คเกจบัญชีผู้ใช้ที่มาพร้อมกับ Meteor  (ด้วยคำสั่ง `meteor add accounts-ui`) แต่เนื่องจากเราสร้างแอพด้วย Bootstrap เราก็ควรใช้แพ็คเกจ `ian:accounts-ui-bootstrap-3` แทน (ไม่ต้องกังวลไป ที่แตกต่างกันก็แค่สไตล์หน้าเว็บเท่านั้น) โดยให้ป้อนคำสั่งดังนี้ :
 
 ~~~bash
-$ mrt add accounts-ui-bootstrap-dropdown
-$ mrt add accounts-password
+meteor add ian:accounts-ui-bootstrap-3
+meteor add accounts-password
 ~~~
 <%= caption "Terminal" %>
 
@@ -41,29 +41,32 @@ $ mrt add accounts-password
   </div>
 </template>
 ~~~
-<%= caption "client/views/application/layout.html" %>
-<%= highlight "6" %>
+<%= caption "client/templates/application/layout.html" %>
+<%= highlight "3~6" %>
 
 ~~~html
 <template name="header">
-  <header class="navbar">
-    <div class="navbar-inner">
-      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </a>
-      <a class="brand" href="{{pathFor 'postsList'}}">Microscope</a>
-      <div class="nav-collapse collapse">
-        <ul class="nav pull-right">
-          <li>{{loginButtons}}</li>
-        </ul>
-      </div>
-    </div>
-  </header>
+	<nav class="navbar navbar-default" role="navigation">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navigation">
+					<span class="sr-only">Toggle navigation</span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+				</button>
+				<a class="navbar-brand" href="{{pathFor 'postsList'}}">Microscope</a>
+			</div>
+			<div class="collapse navbar-collapse" id="navigation">
+				<ul class="nav navbar-nav navbar-right">
+					{{> loginButtons}}
+				</ul>
+			</div>
+		</div>
+	</nav>
 </template>
 ~~~
-<%= caption "client/views/includes/header.html" %>
+<%= caption "client/templates/includes/header.html" %>
 
 ตอนนี้เมื่อเราเปิดไปที่หน้าแอพ เราจะเห็นปุ่มล็อกอินที่มุมขวาบนของหน้าจอ
 
