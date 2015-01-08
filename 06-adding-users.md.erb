@@ -1,17 +1,17 @@
 ---
-title: เพิ่มผู้ใช้เข้าไป (Adding Users)
+title: เพิ่มผู้ใช้งาน
 slug: adding-users
 date: 0006/01/01
 number: 6
-contents: Learn about user accounts in Meteor.|Add all the authentication we'll need for Microscope.|Use the built-in accounts-ui package to get an instant user interface.
+contents: รู้วิธีการเพิ่มผู้ใช้งานใน Meteor|เพิ่มการตรวจสอบที่จำเป็นให้ Microscope|ใช้แพ็คเกจ account-ui สร้างส่วนติดต่อผู้ใช้
 paragraphs: 27
 ---
 
-////
+ที่ผ่านมาเราได้สร้างแอพต้นแบบ โดยนำข้อมูลโพสต์ตัวอย่างมาแสดงผลออกหน้าเว็บในแบบที่ใช้ได้ดีทีเดียว
 
-////
+และเรายังรู้ด้วยว่าหน้าจอจะปรับเปลี่ยนเนื้อหาเมื่อข้อมูลเปลี่ยนแปลงได้ยังไง ไม่ว่าจะแก้ไขหรือเพิ่มข้อมูลมันก็ตอบสนองได้ในทันที แต่ติดตรงที่ว่าแอพเรายังไม่สามารถป้อนข้อมูลเข้าไปได้ อันที่จริงยังไม่รองรับผู้ใช้งานด้วยซ้ำ
 
-////
+ถ้าอย่างนั้น ลองมาดูกันว่าจะแก้ไขเรื่องพวกนี้ได้ยังไง
 
 ### Accounts: users made simple
 
