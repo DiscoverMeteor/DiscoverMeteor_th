@@ -41,51 +41,51 @@ meteor deploy myapp.meteor.com
 ทั้งนี้คุณสามารถใช้ [หน้าเอกสารหลักของ Meteor](http://docs.meteor.com/#deploying) เพื่อค้นหาข้อมูลเพิ่มเติม เช่น การเข้าถึงฐานข้อมูลที่แอพคุณกำลังใช้ หรือการใช้ชื่อโดเมนอื่นกับแอพของคุณ
 
 
-### Deploying On Modulus
+### ดีพลอยไปที่ Modulus
 
-////
+[Modulus](https://modulus.io/) เป็นทางเลือกที่เยี่ยมอันหนึ่งในการดีพลอยแอพ Node.js ทั้งยังเป็นหนึ่งในไม่กี่ตัวซึ่งเป็น Paas  (platform-as-a-service) ที่รองรับการใช้งาน Meteor อย่างเป็นทางการ และก็มีบางคนรันแอพที่ใช้งานจริงอยู่บนนั้นด้วย
 
 <% note do %>
 
 ### Demeteorizer
 
-////
+เครื่องมือแบบโอเพนซอร์สที่ชื่อ [demeteorizer](https://github.com/onmodulus/demeteorizer) จะช่วยแปลงแอพ Meteor ของคุณให้กลายเป็นแอพของ Node.js ได้
 
 <% end %>
 
-////
+เราเริ่มด้วยการ [สร้างบัญชีผู้ใช้](https://modulus.io/register) จากนั้นก็ติดตั้งโปรแกรมคอมมานด์ไลน์ของ Modulus เพื่อใช้ดีพลอยแอพ :
 
 ~~~bash
 npm install -g modulus
 ~~~
 
-////
+แล้วล็อกอินเข้า Modulus
 
 ~~~bash
 modulus login
 ~~~
 
-////
+จากนั้นก็สร้างโปรเจกต์ Modulus ขึ้นมาตัวนึง (ซึ่งคุณสามารถทำผ่านที่หน้าเว็บของ Modulus ได้)
 
 ~~~bash
 modulus project create
 ~~~
 
-////
+ขั้นตอนต่อไปคือ การสร้างฐานข้อมูล MongoDB ให้แอพเรา โดยเราสามารถเลือกสร้างฐานข้อมูล MongoDB ที่ [Modulus เอง](http://help.modulus.io/customer/portal/articles/1647770-using-meteor-with-modulus), ที่ [Compose](https://www.compose.io/)  หรือที่ผู้ให้บริการฐานข้อมูล MongoDB เจ้าอื่นก็ได้
 
-////
+เมื่อเราสร้างฐานข้อมูล MongoDB ได้แล้ว เราก็ไปเอาค่า `MONGO_URL` ของฐานข้อมูลเราจากหน้าเว็บของ Modulus (ไปที่ Dashboard > Databases > Select your database > Administration) และนำมาใช้ตั้งค่าแอพเราดังนี้
 
 ~~~bash
 modulus env set MONGO_URL "mongodb://<user>:<pass>@mongo.onmodulus.net:27017/<database_name>"
 ~~~
 
-////
+ตอนนี้ก็ถึงเวลาที่เราจะดีพลอยแอพแล้ว แค่ป้อนคำสั่งนี้เข้าไป
 
 ~~~bash
 modulus deploy
 ~~~
 
-////
+เราก็ได้ดีพลอยแอพไปที่ Modulus เป็นที่เรียบร้อย โดยใน [หน้าเอกสารของ Modulus ](https://modulus.io/codex/projects)  จะมีคำอธิบายเพิ่มเติมในเรื่อง การเข้าไปดู Log, การใช้ชื่อโดเมนอื่น, และเรื่อง SSL
 
 ### Meteor Up
 
