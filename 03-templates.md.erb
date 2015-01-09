@@ -61,7 +61,7 @@ Meteor เก่งในเรื่องการค้นหาไฟล์ 
   </div>
 </template>
 ~~~
-<%= caption "client/views/posts/posts_list.html" %>
+<%= caption "client/templates/posts/posts_list.html" %>
 
 แล้วสร้าง `post_item.html` อีกตัวตามนี้
 
@@ -74,7 +74,7 @@ Meteor เก่งในเรื่องการค้นหาไฟล์ 
   </div>
 </template>
 ~~~
-<%= caption "client/views/posts/post_item.html" %>
+<%= caption "client/templates/posts/post_item.html" %>
 
 ให้สังเกตุตรงแอททริบิวท์ `name="postsList"` ในแท็ก `<template` ซึ่งเป็นชื่อที่ Meteor ใช้เพื่อเชื่อมโยงเทมเพลทต่างๆเข้าด้วยกัน (โดยไม่สนใจชื่อไฟล์)
 
@@ -141,7 +141,7 @@ Template.postsList.helpers({
   posts: postsData
 });
 ~~~
-<%= caption "client/views/posts/posts_list.js" %>
+<%= caption "client/templates/posts/posts_list.js" %>
 
 ถ้าคุณทำถูก คุณควรจะเห็นหน้าจอแอพคล้ายๆแบบนี้
 
@@ -162,7 +162,7 @@ Template.postsList.helpers({
   </div>
 </template>
 ~~~
-<%= caption "client/views/posts/posts_list.html" %>
+<%= caption "client/templates/posts/posts_list.html" %>
 
 การสร้างตัวช่วยเทมเพลท `posts` ทำให้เราสามารถเรียกใช้มันได้จากเทมเพลทของเรา โดยเทมเพลทจะทำงานซ้ำตามจำนวนข้อมูลในอาร์เรย์ `postsData` และส่งต่อข้อมูลแต่ละตัวนั้นให้กับเทมเพลท `postItem` ทำงานต่อไป
 
@@ -181,7 +181,7 @@ Template.postItem.helpers({
   }
 });
 ~~~
-<%= caption "client/views/posts/post_item.js" %>
+<%= caption "client/templates/posts/post_item.js" %>
 
 จะเห็นว่าค่าที่ส่งคืนมาจากตัวช่วย `domain` ไม่ใช่อาร์เรย์แต่เป็นฟังก์ชัน ซึ่งเป็นวิธีการเขียนโค้ดแบบที่นิยมใช้กันมาก และใช้ได้ดีกว่าแบบที่เราเขียนก่อนหน้านี้
 
