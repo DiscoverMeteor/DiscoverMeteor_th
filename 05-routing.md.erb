@@ -1,5 +1,5 @@
 ---
-title: การจัดเส้นทาง (Routing)
+title: การจัดเส้นทาง
 slug: routing
 date: 0005/01/01
 number: 5
@@ -23,7 +23,7 @@ paragraphs: 72
 เราเริ่มด้วยการติดตั้งแพ็คเกจจาก Atmosphere
 
 ~~~bash
-$ meteor add iron:router
+meteor add iron:router
 ~~~
 <%= caption "Terminal" %>
 
@@ -142,7 +142,7 @@ Router.route('/', {name: 'postsList'});
 
 //...
 ~~~
-<%= caption "client/views/application/layout.html"%>
+<%= caption "client/templates/application/layout.html"%>
 <%= highlight "3" %>
 
 <%= commit "5-1", "Very basic routing." %>
