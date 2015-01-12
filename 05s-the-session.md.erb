@@ -1,18 +1,18 @@
 ---
-title: เซสชัน (The Session)
+title: เซสชั่น
 slug: the-session
 date: 0005/01/02
 number: 5.5
 sidebar: true
-contents: Learn about the Meteor Session|Learn about the autorun function|Learn about Hot Code Reload
+contents: เรียนรู้เรื่องเซสชั่นของ Meteor|เรียนรู้วิธีใช้ฟังก์ชัน autorun|เรียนรู้การรีโหลดโค้ดอัตโนมัติ
 paragraphs: 33
 ---
 
-////
+Meteor เป็นเฟรมเวอร์คแบบรีแอคทีฟ นั่นหมายความว่า เมื่อข้อมูลเปลี่ยนแปลง สิ่งต่างๆในแอพก็จะเปลี่ยนตามโดยที่คุณไม่ต้องทำอะไร
 
-////
+เราได้เห็นการทำงานแบบนี้กันแล้วกับเทมเพลตที่เปลี่ยนแปลงตามข้อมูลและเส้นทางที่เปลี่ยนไป
 
-////
+ในบทต่อไปเราจะเจาะลึกลงไปว่าการทำงานแบบนี้เกิดขึ้นได้อย่างไร แต่ก่อนอื่นเราอยากแนะนำให้รู้จักกับคุณสมบัติพิเศษพื้นฐานทีี่มีประโยชน์มากกับแอพแบบต่างๆ
 
 ### The Meteor Session
 
@@ -36,20 +36,28 @@ paragraphs: 33
 ////
 
 ~~~html
-<header class="navbar">
-  <div class="navbar-inner">
-    <a class="brand" href="{{pathFor 'postsList'}}">{{pageTitle}}</a>
-  </div>
+<header class="navbar navbar-default" role="navigation">
+	<div class="navbar-header">
+		<a class="navbar-brand" href="{{pathFor 'postsList'}}">{{pageTitle}}</a>
+	</div>
 </header>
 ~~~
-<%= caption "client/views/application/layout.html"%>
+<%= caption "client/templates/application/layout.html"%>
 
 ~~~js
 Template.layout.helpers({
   pageTitle: function() { return Session.get('pageTitle'); }
 });
 ~~~
-<%= caption "client/views/application/layout.js"%>
+<%= caption "client/templates/application/layout.js"%>
+
+<% note do %>
+
+### A Note About Sidebar Code
+
+////
+
+<% end %>
 
 ////
 
@@ -59,6 +67,8 @@ Template.layout.helpers({
 ❯ Session.set('pageTitle', 'A brand new title');
 ~~~
 <%= caption "Browser console" %>
+
+////
 
 ////
 
@@ -89,7 +99,7 @@ helloWorld = function() {
 ////
 
 ~~~js
-❯ Deps.autorun( function() { console.log('Value is: ' + Session.get('pageTitle')); } );
+❯ Tracker.autorun( function() { console.log('Value is: ' + Session.get('pageTitle')); } );
 Value is: A brand new title
 ~~~
 <%= caption "Browser console" %>
@@ -107,8 +117,8 @@ Value is: Yet another value
 ////
 
 ~~~js
-Deps.autorun(function() {
-  alert(Session.get('message'));
+Tracker.autorun(function() {
+	alert(Session.get('message'));
 });
 ~~~
 
@@ -155,3 +165,6 @@ null
 
 1. ////
 2. ////
+
+////
+
