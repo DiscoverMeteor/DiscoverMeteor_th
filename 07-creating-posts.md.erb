@@ -13,7 +13,7 @@ paragraphs: 60
 
 ### สร้างหน้าโพสต์ข่าว
 
-เราเริ่มต้นด้วยการสร้างเส้นทางไปที่หน้าใหม่
+เราเริ่มต้นด้วยการสร้างเส้นทางไปที่หน้าใหม่ของเรา
 
 ~~~js
 Router.configure({
@@ -37,9 +37,9 @@ Router.onBeforeAction('dataNotFound', {only: 'postPage'});
 <%= caption "lib/router.js" %>
 <%= highlight "15" %>
 
-### Adding A Link To The Header
+### เพิ่มลิงก์ที่ส่วนหัว
 
-////
+ด้วยเส้นทางที่เราสร้างขึ้นใหม่ ตอนนี้เราก็จะเพิ่มลิงก์ไปหน้า submit ที่ส่วนหัวของหน้าเว็บ
 
 ~~~html
 <template name="header">
@@ -69,7 +69,7 @@ Router.onBeforeAction('dataNotFound', {only: 'postPage'});
 <%= caption "client/templates/includes/header.html" %>
 <%= highlight "14~16" %>
 
-////
+การที่เรากำหนดเส้นทางก็หมายถึงว่า ถ้าผู้ใช้เปิดเข้าไปที่พาธ `/submit` Meteor ก็จะแสดงเทมเพลต `postSubmit` ด้วย ดังนั้นเราก็จะมาเขียนเทมเพลตนี้กัน
 
 ~~~html
 <template name="postSubmit">
@@ -92,11 +92,11 @@ Router.onBeforeAction('dataNotFound', {only: 'postPage'});
 ~~~
 <%= caption "client/templates/posts/post_submit.html" %>
 
-////
+จะเห็นว่า มีการใช้มาร์คอัพพอสมควรในเทมเพลต เหตุผลง่ายๆก็เพราะเราใช้ Twitter Bootstrap ซึ่งนอกจากส่วนประกอบที่จำเป็นของฟอร์มแล้ว มาร์คอัพพิเศษพวกนี้ก็จะช่วยให้แอพเราดูดีขึ้นด้วย และมันควรจะออกมาคล้ายๆ แบบนี้
 
 <%= screenshot "7-1", "The post submit form" %>
 
-////
+เนื่องจากฟอร์มนี้เป็นแบบง่ายๆ เราจึงไม่ต้องกังวลกับการทำงานของมันนัก เพราะว่ายังไงเราก็จะดักจับเหตุการณ์ตอน submit และอัพเดทข้อมูลด้วยจาวาสคริปต์อยู่แล้ว (และก็ไม่มีเหตุผลที่จะต้องหาทางออกในกรณีไม่มีจาวาสคริปต์ เพราะถ้าคุณพิจารณาดูจะเห็นว่าแอพ Meteor ทำงานไม่ได้อยู่แล้วถ้าจาวาสคริปต์ไม่ทำงาน)
 
 ### Creating Posts
 
