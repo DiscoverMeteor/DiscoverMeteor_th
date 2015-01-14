@@ -269,9 +269,9 @@ Router.onBeforeAction(requireLogin, {only: 'postSubmit'});
 
 <%= commit "7-4", "Show a loading screen while waiting to login." %>
 
-### Hiding the Link
+### การซ่อนลิงก์
 
-////
+วิธีการง่ายที่สุด ที่จะป้องกันผู้ใช้เข้ามาที่หน้านี้โดยบังเอิญเมื่อล็อกเอาท์ออกไปแล้ว ก็คือ ซ่อนลิงก์ไม่ให้เห็น ซึ่งเราทำได้ง่ายๆดังนี้
 
 ~~~html
 //...
@@ -287,9 +287,9 @@ Router.onBeforeAction(requireLogin, {only: 'postSubmit'});
 
 <%= commit "7-5", "Only show submit post link if logged in." %>
 
-////
+ตัวช่วย `currentUser` ถูกเตรียมไว้ให้เราโดยแพ็คเกจ `accounts` ซึ่งเป็นโค้ด Spacebars ที่มีค่าเหมือนกับคำสั่ง `Meteor.user()`  และเนื่องจากมันเป็นรีแอกทีฟ ลิงก์นี้ก็จะแสดงหรือหายไปเมื่อคุณล็อกอินเข้ามา หรือล็อกเอาท์ออกจากแอพ
 
-### Meteor Method: Better Abstraction and Security
+### ใช้เมธอด Meteor ลดความซับซ้อนและสร้างความปลอดภัย
 
 ////
 
