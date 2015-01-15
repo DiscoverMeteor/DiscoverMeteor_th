@@ -127,7 +127,7 @@ Template.postEdit.events({
 
 ### Adding Links
 
-////
+เราควรเพิ่มลิงก์แก้ไขในหน้าข่าวด้วยเพื่อให้ผู้ใช้มีวิธีเข้าไปที่หน้าแก้ไข
 
 ~~~html
 <template name="postItem">
@@ -146,7 +146,7 @@ Template.postEdit.events({
 <%= caption "client/templates/posts/post_item.html" %>
 <%= highlight "5~8" %>
 
-////
+และแน่นอนว่าเราไม่ต้องการให้คุณเห็นลิงก์แก้ไขที่ข่าวของคนอื่น เราก็ต้องใช้ตัวช่วย `ownPost` กับงานนี้
 
 ~~~js
 Template.postItem.helpers({
@@ -167,7 +167,7 @@ Template.postItem.helpers({
 
 <%= commit "8-1", "Added edit posts form." %>
 
-////
+หน้าฟอร์มแก้ไขข่าวของเราดูดีทีเดียว แต่ทว่าคุณก็ยังไม่สามารถแก้ไขอะไรในตอนนี้ได้ เกิดอะไรขึ้นกันแน่
 
 ### Setting Up Permissions
 
