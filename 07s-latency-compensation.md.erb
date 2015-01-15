@@ -1,133 +1,184 @@
 ---
-title: การชดเชยความล่าช้า (Latency Compensation)
+title: การชดเชยความล่าช้า
 slug: latency-compensation
 date: 0007/01/02
 number: 7.5
 sidebar: true
-contents: Understand latency compensation.|Slow your app down and see what's going on.|Learn how Meteor Methods call each other.
+contents: เข้าใจเรื่องการชดเชยความล่าช้า|ทำให้แอพช้าลงเพื่อดูว่าเกิดอะไรขึ้น|เรียนรู้ว่าเมธอดของ Meteor เรียกใช้งานกันเองอย่างไร
 paragraphs: 28
 ---
 
-////
+ในบทที่ผ่านมา เราได้แนะนำแนวคิดใหม่ในโลกของ Meteor นั่นก็คือ **เมธอด**
 
 <%= diagram "latency1", "Without latency compensation", "pull-right" %>
 
-////
+เมธอดของ Meteor คือ วิธีการทำงานของชุดคำสั่งบนเซิร์ฟเวอร์ที่มีแบบแผน ในตัวอย่างของเรานั้น เราใช้เมธอดเพื่อต้องการมั่นใจว่า ข่าวที่ป้อนใหม่จะถูกแท็กด้วยชื่อและ id ของผู้สร้าง รวมทั้งเวลาปัจจุบันของเซิร์ฟเวอร์
 
-////
+อย่างไรก็ตาม ถ้า Meteor เรียกใช้เมธอดด้วยวิธีปกติ เราก็จะพบปัญหาแน่นอน ลองพิจารณาลำดับเหตุการณ์ข่างล่างนี้ดู (เวลาที่สุ่มขึ้นมาใช้เพื่อการอธิบายเท่านั้น)
 
-- *+0ms:* ////
-- *+200ms:* ////
-- *+500ms:* ////
+- *+0ms:* ผู้ใช้คลิ๊กที่ปุ่ม submit และเบราว์เซอร์เรียกใช้เมธอด
+- *+200ms:* เซิร์ฟเวอร์ปรับแก้ไขฐานข้อมูล Mongo
+- *+500ms:* ไคลเอนต์รับค่าการเปลี่ยนแปลง และอัพเดทหน้าจอตามการเปลี่ยนแปลงนั้น
 
-If this were the way Meteor operated, then there'd be a short lag between performing such actions and seeing the results (that lag being more or less noticeable depending on how close you were to the server). We can't have that in a modern web application!
+ถ้า Meteor ทำงานด้วยวิธีแบบนี้ มันก็จะทำให้เกิดความล่าช้าระหว่างการทำงานกับการแสดงผล (ความล่าช้าจะมากหรือน้อย ขึ้นอยู่กับว่า คุณอยู่ใกล้เซิร์ฟเวอร์แค่ไหน) ซึ่งเราปล่อยให้เกิดขึ้นกับเว็บแอพสมัยใหม่ไม่ได้
 
-### Latency Compensation
+### การชดเชยความล่าช้า
 
 <%= diagram "latency2", "With latency compensation", "pull-right" %>
 
-////
+เพื่อหลีกเลี่ยงปัญหานี้ Meteor ก็นำเสนอแนวคิดใหม่ที่เรียกว่า **การชดเชยความล่าช้า** เมื่อเราสร้างเมธอด `post` ขึ้นมานั้น เราใส่มันไว้ในไฟล์ที่อยู่ในโฟลเดอร์ `collections/` นั่นก็หมายความว่า มันถูกเรียกใช้ได้จากทั้งเซิร์ฟเวอร์ *และไคลเอนต์* และมันก็รันทั้งสองฝั่งในเวลาเดียวกันด้วย!
 
-////
+เมื่อคุณเรียกใช้เมธอด ไคลเอนต์จะส่งคำสั่งนั้นไปที่เซิร์ฟเวอร์ และในขณะเดียวกันก็จะ *จำลอง* การทำงานของเมธอดกับคอลเลคชั่นที่ไคลเอนต์ไปพร้อมๆกันด้วย ดังนั้นการทำงานของเราก็จะกลายเป็นแบบนี้
 
-- *+0ms:* ////
-- *+0ms:* ////
-- *+200ms:* ////
-- *+500ms:* ////
+- *+0ms:* ผู้ใช้คลิ๊กที่ปุ่ม submit และเบราว์เซอร์เรียกใช้เมธอด
+- *+0ms:*  ไคลเอนต์จำลองการทำงานของเมธอดกับคอลเลคชันที่ไคลเอนต์ และปรับหน้าจอตามผลการทำงาน
+- *+200ms:*  เซิร์ฟเวอร์ปรับแก้ไขฐานข้อมูล Mongo
+- *+500ms:*  ไคลเอนต์รับค่าการเปลี่ยนแปลง แล้วยกเลิกการเปลี่ยนแปลงที่จำลองขึ้น และใช้การเปลี่ยนแปลงจากเซิร์ฟเวอร์แทน (ซึ่งโดยทั่วไปจะเหมือนกัน) จากนั้นอัพเดทหน้าจอตามการเปลี่ยนแปลง
 
-////
+โดยผลที่ได้คือ ผู้ใช้เห็นการเปลี่ยนแปลงทันที จากนั้นเมื่อเซิร์ฟเวอร์ส่งผลลัพธ์กลับมาหลังจากนั้นอีกไม่นาน ซึ่งอาจจะมีหรือไม่มีการเปลี่ยนแปลงจากเอกสารต้นทางที่เซิร์ฟเวอร์ส่งมาให้ก็ได้ สิ่งหนึ่งที่เราได้จากตรงนี้คือ เราควรจะลองจนแน่ใจว่า เราได้ใช้ข้อมูลที่ใกล้เคียงกับเอกสารจริงมากที่สุดเท่าที่จะทำได้
 
-### Observing Latency Compensation
+### สังเกตุการชดเชยความล่าช้า
 
-////
+เราก็แค่เปลี่ยนอะไรเล็กน้อยกับเมธอด `post` เพื่อสังเกตุการทำงานนี้ เริ่มจากการใช้ฟังก์ชัน `Meteor._sleepForMs()` เพื่อหน่วงการทำงานของเมธอดประมาณ 5 วินาที (ตรงนี้สำคัญมาก) *บนเซิร์ฟเวอร์* 
 
-////
+เราจะใช้ `isServer` เพื่อถาม Meteor ว่าตอนนี้กำลังทำงานอยู่ที่ไคลเอนต์ (ที่เรียกว่า stub) หรือบนเซิร์ฟเวอร์ ซึ่ง [stub](http://docs.meteor.com/#methods_header) ก็คือ เมธอดจำลองการทำงานที่ Meteor รันบนไคลเอนต์ไปพร้อมๆกัน ในขณะที่เมธอด "จริง" จะรันอยู่บนเซิร์ฟเวอร์
 
-////
+จากนั้น เราจะบอก Meteor ว่า ถ้าโค้ดที่กำลังรันนั้นเกิดบนเซิร์ฟเวอร์ ให้หน่วงเวลาไว้ซัก 5 วินาที และเพิ่มคำว่า `(server)` ไปที่ตอนท้ายของชื่อข่าว ถ้าไม่ใช่ให้เพิ่มคำว่า `(client)` เข้าไปแทน
 
 ~~~js
-Meteor.methods({
-  post: function(postAttributes) {
-    // […]
+Posts = new Mongo.Collection('posts');
 
-    // pick out the whitelisted keys
-    var post = _.extend(_.pick(postAttributes, 'url', 'message'), {
-      title: postAttributes.title + (this.isSimulation ? '(client)' : '(server)'),
-      userId: user._id,
-      author: user.username,
-      submitted: new Date().getTime()
+Meteor.methods({
+  postInsert: function(postAttributes) {
+    check(this.userId, String);
+    check(postAttributes, {
+      title: String,
+      url: String
     });
 
-    // wait for 5 seconds
-    if (! this.isSimulation) {
-      var Future = Npm.require('fibers/future');
-      var future = new Future();
-      Meteor.setTimeout(function() {
-        future.return();
-      }, 5 * 1000);
-      future.wait();
+    if (Meteor.isServer) {
+      postAttributes.title += "(server)";
+      // wait for 5 seconds
+      Meteor._sleepForMs(5000);
+    } else {
+      postAttributes.title += "(client)";
     }
 
+    var postWithSameLink = Posts.findOne({url: postAttributes.url});
+    if (postWithSameLink) {
+      return {
+        postExists: true,
+        _id: postWithSameLink._id
+      }
+    }
+    
+    var user = Meteor.user();
+    var post = _.extend(postAttributes, {
+      userId: user._id, 
+      author: user.username, 
+      submitted: new Date()
+    });
+    
     var postId = Posts.insert(post);
-
-    return postId;
+    
+    return {
+      _id: postId
+    };
   }
 });
 ~~~
 <%= caption "collections/posts.js" %>
-<%= highlight "6, 7, 13~22" %>
+<%= highlight "11~17" %>
 
-////
+ถ้าเราหยุดไว้แค่นี้ เราก็ยังคงสรุปอะไรไม่ได้มากเท่าไหร่ สิ่งที่เกิดตอนนี้ ดูเหมือนว่าฟอร์มที่ใช้ submit จะหยุดการทำงานไป 5 วินาที ก่อนจะส่งคุณกลับไปที่หน้าแสดงรายการข่าว และดูเหมือนไม่มีอะไรเกิดขึ้นอีก
 
-////
-
-////
+เพื่อให้เข้าใจว่าทำไม เราจะกลับไปที่โค้ดของตัวจัดการเหตุการณ์ submit
 
 ~~~js
 Template.postSubmit.events({
-  'submit form': function(event) {
-    event.preventDefault();
-
+  'submit form': function(e) {
+    e.preventDefault();
+    
     var post = {
-      url: $(event.target).find('[name=url]').val(),
-      title: $(event.target).find('[name=title]').val(),
-      message: $(event.target).find('[name=message]').val()
-    }
-
-    Meteor.call('post', post, function(error, id) {
+      url: $(e.target).find('[name=url]').val(),
+      title: $(e.target).find('[name=title]').val()
+    };
+    
+    Meteor.call('postInsert', post, function(error, result) {
+      // display the error to the user and abort
       if (error)
         return alert(error.reason);
+      
+      // show this result but route anyway
+      if (result.postExists)
+        alert('This link has already been posted');
+    
+      Router.go('postPage', {_id: result._id});  
     });
-    Router.go('postsList');
   }
 });
 ~~~
-<%= caption "client/views/posts/post_submit.js" %>
-<%= highlight "15" %>
+<%= caption "client/templates/posts/post_submit.js" %>
+
+เราได้ย้ายคำสั่ง `Router.go() ` มาไว้ในฟังก์ชัน callback หมายความว่า ฟอร์มจะรอจนกว่าเมธอดนั้นทำงานเสร็จก่อนแล้วค่อยเปลี่ยนหน้าเว็บให้เรา
+
+ตอนนี้ก็ดูเหมือนว่าเราได้มาถูกทางแล้ว โดยทั้งหมดก็คือ เราไม่ควรส่งผู้ใช้ไปที่หน้าไหนก่อนที่เราจะรู้ว่าข้อมูลที่ป้อนเข้ามาใช้ได้หรือไม่ เพราะอาจทำให้เกิดการสับสนได้ถ้าเราส่งผู้ใช้ไปหน้านึง จากนั้นอีกไม่กี่วินาทีต่อมาก็เปลี่ยนหน้าเว็บอีกครั้งพาเค้ากลับไปที่หน้าป้อนข่าวใหม่เพื่อแก้ไขข้อมูลอีกครั้ง
+
+แต่เนื่องจากตอนนี้เรากำลังดูตัวอย่างอยู่ เและเราก็ต้องการเห็นผลลัพธ์ของการทำงานทันที ดังนั้นเราก็จะเปลี่ยนเส้นทางไปที่ `postsList` แทน (เราไม่สามารถเปลี่ยนเส้นทางไปที่หน้าข่าวได้ เพราะเราไม่รู้ค่า `_id` จากข้างนอกเมธอด) และเอาคำสั่งเปลี่ยนเส้นทางออกจาก callback เมื่อเรียบร้อยก็จะได้แบบนี้
+
+~~~js
+Template.postSubmit.events({
+  'submit form': function(e) {
+    e.preventDefault();
+    
+    var post = {
+      url: $(e.target).find('[name=url]').val(),
+      title: $(e.target).find('[name=title]').val()
+    };
+    
+    Meteor.call('postInsert', post, function(error, result) {
+      // display the error to the user and abort
+      if (error)
+        return alert(error.reason);
+      
+      // show this result but route anyway
+      if (result.postExists)
+        alert('This link has already been posted');
+    });
+
+    Router.go('postsList');  
+
+  }
+});
+~~~
+<%= caption "client/templates/posts/post_submit.js" %>
+<%= highlight "20" %>
 
 <%= scommit "7-5-1", "Demonstrate the order that posts appear using a sleep." %>
 
-////
+ถ้าเราสร้างข่าวใหม่ตอนนี้ เราจะเห็นการชดเชยความล่าช้าเกิดขึ้นชัดเจน เริ่มแรก ชื่อข่าวถูกต่อท้ายด้วย `(client)` (ข่าวแรกในรายการ ลิงก์ไปที่ GitHub)
 
 <%= screenshot "s5-1", "Our post as first stored in the client collection" %>
 
-////
+จากนั้นอีก 5 วินาทีต่อมา มันก็ถูกแทนที่ด้วยเอกสารจริงซึ่งได้จากเซิร์ฟเวอร์
 
 <%= screenshot "s5-2", "Our post once the client receives the update from the server collection" %>
 
-### Client Collection Methods
+### เมธอดกับคอลเลคชั่นที่ไคลเอนต์
 
-////
+หลังจากเรื่องพวกนี้ คุณอาจจะคิดว่า เมธอดนั้นค่อนข้างซับซ้อน แต่ความจริงก็คือ มันทำงานแบบง่ายๆก็ได้ และเราก็เห็นเมธอดแบบง่ายๆกันมาแล้วสามตัว เป็นเมธอดที่เกียวกับการเปลี่ยนแปลงคอลเลคชั่น อันได้แก่ `insert`, `update` และ `remove`
 
-////
+เมื่อคุณสร้างคอลเลคชั่นบนเซิร์ฟเวอร์ชื่อ `'posts'` คุณก็ได้สร้างเมธอดขึ้นมาสามตัวโดยไม่รู้ตัว คือ `posts/insert`,  `posts/update` และ `posts/delete` หรืออีกนัยนึงก็คือ เมื่อคุณเรียกใช้ `Posts.insert()` กับคอลเลคชั่นของคุณที่ไคลเอนต์ คุณก็กำลังเรียกใช้เมธอดที่ชดเชยความล่าช้า ซึ่งทำงานสองอย่างนี้
 
-1. ////
-2. ////
+1. ตรวจดูว่า เรามีสิทธิที่จะเปลี่ยนแปลงข้อมูลได้หรือไม่ โดยเรียกใช้ callback ทั้ง `allow` และ `deny` (อย่างไรก็ดี สิ่งนี้ไม่จำเป็นต้องเกิดขึ้นตอนที่จำลองการทำงาน)
+2. ทำการเปลี่ยนแปลงจริงกับแหล่งเก็บข้อมูล
+  
+### เมธอดเรียกใช้เมธอด
+ถ้าคุณตามทัน คุณอาจเพิ่งเข้าใจว่า เมธอด `post` ก็เรียกใช้อีกเมธอด (`post/insert`) เมื่อเราเพิ่มข่าวเข้าไป แต่ยังสงสัยอยู่ว่ามันทำงานได้ยังไง
+ 
+เมื่อการทำงานแบบจำลองเกิดขึ้น (เมธอดอีกตัวที่ฝั่งไคลเอนต์) เราก็เรียกใช้ `insert` แบบจำลอง (เพื่อเพิ่มข้อมูลเข้าไปที่คอลเลคชั่นฝั่งไคลเอนต์) แต่เราไม่ได้เรียกใช้ `insert` จริงๆบนฝั่งเซิร์ฟเวอร์ เพราะเรารู้ว่าเมธอด `post` เวอร์ชันบนเซิร์ฟเวอร์จะทำตรงนี้ให้
 
-### Methods Calling Methods
+ผลก็คือ เมื่อเมธอด `post` บนฝั่งเซิร์ฟเวอร์เรียกใช้ `insert` มันก็ไม่ต้องกังวลกับการทำงานแบบจำลองนั้น และทำงานไปแบบที่เคยเป็น
 
-////
+และก็เหมือนกับบทแทรกก่อนๆ คุณต้องไม่ลืมที่จะเปลี่ยนโค้ดกลับมาเหมือนเดิม ก่อนที่จะอ่านบทต่อไป
 
-////
-
-////
