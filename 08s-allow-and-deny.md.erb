@@ -1,10 +1,10 @@
 ---
-title: การอนุญาต และการปฏิเสธ (Allow and Deny)
+title: การอนุญาตและปฏิเสธ
 slug: allow-and-deny
 date: 0008/01/02
 number: 8.5
 sidebar: true
-contents: Learn about Allow and Deny callbacks.|Understand in which order callbacks are called.
+contents: เรียนรู้เกี่ยวกับ callback ของการอนุญาตและปฏิเสธ|เข้าใจลำดับการเรียกใช้ callback
 paragraphs: 16
 ---
 
@@ -12,7 +12,7 @@ paragraphs: 16
 
 ////
 
-////
+//// 
 
 ////
 
@@ -24,7 +24,7 @@ paragraphs: 16
 
 <%= diagram "allow_deny", "Note: n/e stands for Not Executed" %>
 
-////
+//// 
 
 ////
 
@@ -36,25 +36,7 @@ paragraphs: 16
 
 ////
 
-### Server-side permissions
-
-////
-
-////
-
-### Using deny as a callback
-
-////
-
-~~~js
-Posts.deny({
-  update: function(userId, doc, fields, modifier) {
-    doc.lastModified = +(new Date());
-    return false;
-  },
-  transform: null
-});
-~~~
+### Server-side Permissions
 
 ////
 
