@@ -57,7 +57,7 @@ Router.onBeforeAction(requireLogin, {only: 'postSubmit'});
 
 ~~~html
 <template name="postEdit">
-  <form class="main form">
+  <form class="main form page">
     <div class="form-group">
       <label class="control-label" for="url">URL</label>
       <div class="controls">
@@ -123,7 +123,7 @@ Template.postEdit.events({
 
 ส่วน callback ของการอัพเดทนั้นยาวกว่านิดนึง แต่ก็ไม่ได้ซับซ้อนมากกว่าเดิมเท่าไหร่ หลังจากที่ปิดการทำงานปกติและได้ข่าวมาแล้ว ก็จะดึงค่าฟิลด์จากหน้าเพจและเก็บไว้ในอ็อบเจกต์ `postProperties` 
 
-จากนั้นก็ส่งอ็อบเจกต์นี้ไปให้เมธอด `Collection.update() ` ของ Meteor ด้วยตัวดำเนินการ `$set` (ที่จะเปลี่ยนค่าของฟิลด์เฉพาะบางตัวโดยไม่แตะต้องตัวอื่นๆ) และใช้ callback เพิ่อแสดงข้อความผิดพลาด หรือส่งผู้ใช้กลับไปที่หน้าข่าว ถ้าการอัพเดททำได้สำเร็จ
+จากนั้นก็ส่งอ็อบเจกต์นี้ไปให้เมธอด `Collection.update() ` ของ Meteor ด้วยตัวดำเนินการ [`$set`](http://docs.mongodb.org/manual/reference/operator/update/set/) (ที่จะเปลี่ยนค่าของฟิลด์เฉพาะบางตัวโดยไม่แตะต้องตัวอื่นๆ) และใช้ callback เพื่อแสดงข้อความผิดพลาด หรือส่งผู้ใช้กลับไปที่หน้าข่าว ถ้าการอัพเดททำได้สำเร็จ
 
 ### Adding Links
 
