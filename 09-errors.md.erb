@@ -1,33 +1,31 @@
 ---
-title: รับมือกับความผิดพลาด (Errors)
+title: รับมือกับความผิดพลาด
 slug: errors
 date: 0009/01/01
 number: 9
-contents: Create a better mechanism for displaying errors and messages.|Learn how to use `Template.rendered` to know when a user has seen an error.|Use a router filter to make sure errors are only seen once.
+contents: สร้างกลไกแสดงข้อผิดพลาดและข้อความต่างๆ|ตรวจสอบความถูกต้องของข้อมูลอย่างเข้มข้น|แสดงรายงานข้อผิดพลาดลงบนฟอร์ม
 paragraphs: 31
 ---
 
-////
+การใช้แค่ไดอะล็อกพื้นฐานอย่าง `alert()` เพื่อแสดงข้อความเตือนเมื่อเกิดปัญหากับข้อมูลที่ส่งเข้ามาทางฟอร์มไม่ใช่อะไรที่น่าพอใจนัก ที่สำคัญคือ มันไม่ได้ช่วยอะไรเรื่อง UX  เลย ซึ่งพวกเราน่าจะทำได้ดีกว่านั้น
 
-////
+โดยเราน่าจะสร้างกลไกรายงานข้อผิดพลาดขึ้นใหม่ให้ดีกว่าเดิม สามารถแจ้งเตือนผู้ใช้ได้ว่าเกิดอะไรขึ้น โดยไม่ขัดขวางการทำงานที่ดำเนินไปตามปกติ
 
-### Introducing Local Collections
+ซึ่งสิ่งที่เราจะสร้างนี้ก็คือ ระบบง่ายๆใช้แสดงข้อความผิดพลาด ที่ด้านมุมขวาบนของหน้าจอ คล้ายๆกับแอพของ Mac ที่ชื่อ [Growl](http://growl.info/)
 
-////
+### รู้จักกับคอลเลกชั่นแบบโลคอล (Local Collections)
 
-////
+ก่อนจะเริ่ม เราจำเป็นต้องสร้างคอลเลกชั่นเพื่อใช้เก็บข้อความผิดพลาดซะก่อน โดยให้ข้อความผิดพลาดเป็นของเซสชั่นที่กำลังใช้งานอยู่เท่านั้น และไม่จำเป็นต้องจัดเก็บลงฐานข้อมูลด้วย สิ่งใหม่ที่เรากำลังจะสร้างคือ *คอลเลกชั่นแบบโลคอล* ซึ่งหมายความว่า คอลเลกชั่นของข้อผิดพลาดนี้ จะถูกเก็บไว้ในเบราว์เซอร์เท่านั้น ไม่มีการส่งกลับไปที่เซิร์ฟเวอร์
 
-////
-
-////
+เพื่อให้เป็นไปตามนี้ เราก็สร้างคอลเลกชั่นของข้อผิดพลาดไว้ข้างในโฟลเดอร์ `client` (เพื่อให้เรียกได้จากฝั่งไคลเอนต์เท่านั้น) โดยระบุชื่อของคอลเลกชั่น MongoDB เป็น `null` (เนื่องจากข้อมูลในคอลเลกชั่นนี้จะไม่ถูกบันทึกลงในฐานข้อมูลที่เซิร์ฟเวอร์เลย)
 
 ~~~js
 // Local (client-only) collection
-Errors = new Meteor.Collection(null);
+Errors = new Mongo.Collection(null);
 ~~~
 <%= caption "client/helpers/errors.js" %>
 
-////
+เมื่อมีคอลเลกชั่นแล้ว เราก็สร้างฟังก์ชั่น `throwError` เพื่อใส่ข้อความผิดพลาดเข้าไปในนั้น โดยเราไม่ต้องกังวลเรื่อง `allow` หรือ `deny` หรือความปลอดภัยอื่นๆ เนื่องจากคอลเลกชั่นนี้เป็นของผู้ใช้ปัจจุบันเท่านั้น
 
 ~~~js
 throwError = function(message) {
@@ -36,31 +34,31 @@ throwError = function(message) {
 ~~~
 <%= caption "client/helpers/errors.js" %>
 
-////
+ข้อดีของการนำคอลเลกชั่นแบบโลคอลมาใช้เก็บข้อความผิดพลาดนี้ ก็เหมือนกับคอลเลกชั่นอื่่นคือ ความเป็นรีแอคทีฟ ซึ่งหมายความว่า เราสามารถแสดงข้อความผิดพลาดได้แบบรีแอคทีฟเหมือนๆกับที่เราแสดงข้อมูลจากคอลเลกชั่นอื่นๆนั่นเอง
 
-### Displaying errors
+### แสดงข้อความผิดพลาด
 
-////
+เราจะแทรกข้อความผิดพลาดไว้ที่ส่วนบนของไฟล์เลย์เอาท์ของเรา ดังนี้
 
 ~~~html
 <template name="layout">
   <div class="container">
     {{> header}}
     {{> errors}}
-    <div id="main" class="row-fluid">
-      {{yield}}
+    <div id="main">
+      {{> yield}}
     </div>
   </div>
 </template>
 ~~~
-<%= caption "client/views/application/layout.html" %>
-<%= highlight "7" %>
+<%= caption "client/templates/application/layout.html" %>
+<%= highlight "4" %>
 
-////
+และสร้างเทมเพลท `errors` และ `error` ในไฟล์ `errors.html`
 
 ~~~html
 <template name="errors">
-  <div class="errors row-fluid">
+  <div class="errors">
     {{#each errors}}
       {{> error}}
     {{/each}}
@@ -68,25 +66,25 @@ throwError = function(message) {
 </template>
 
 <template name="error">
-  <div class="alert alert-error">
+  <div class="alert alert-danger" role="alert">
     <button type="button" class="close" data-dismiss="alert">&times;</button>
     {{message}}
   </div>
 </template>
 ~~~
-<%= caption "client/views/includes/errors.html" %>
+<%= caption "client/templates/includes/errors.html" %>
 
 <% note do %>
 
-### Twin Templates
+### เทมเพลทคู่
 
-////
+คุณอาจสังเกตุเห็นว่าเราได้ใส่เทมเพลทสองตัวในไฟล์เดียวกัน ที่ผ่านมาเราใช้แบบ "หนึ่งไฟล์ หนึ่งเทมเพลท" สำหรับ Meteor แล้ว การที่เรารวมเทมเพลททั้งหมดไว้ในไฟล์เดียวไม่ทำให้เกิดปัญหาอะไร (แม้ว่าจะทำให้สับสนกับชื่อพอสมควร เช่น `main.html`)
 
-////
+ส่วนในกรณีนี้ เนื่องจากเทมเพลททั้งสองค่อนข้างสั้น เราขอยกเว้นและรวมมันไว้ที่ไฟล์เดียวกันเพื่อให้ไฟล์ที่เก็บดูสะอาดตาขึ้น
 
 <% end %>
 
-////
+ตอนนี้เราเหลือแค่สร้างตัวช่วยเทมเพลท และเราก็พร้อมจะไปต่อแล้ว!
 
 ~~~js
 Template.errors.helpers({
@@ -95,97 +93,142 @@ Template.errors.helpers({
   }
 });
 ~~~
-<%= caption "client/views/includes/errors.js" %>
+<%= caption "client/templates/includes/errors.js" %>
+
+ถึงตรงนี้ คุณก็พร้อมที่จะทดสอบข้อความผิดพลาดนี้ด้วยตัวเองแล้ว แค่เปิดคอนโซลของเบราว์เซอร์และพิมพ์
+
+~~~js
+throwError("I'm an error!");
+~~~
+
+<%= screenshot "9-1", "Testing error messages." %>
 
 <%= commit "9-1", "Basic error reporting." %>
 
-### Creating errors
+<% note do %>
 
-////
+### ข้อผิดพลาดสองรูปแบบ
 
-////
+เป็นเรื่องสำคัญที่เราต้องแยกแยะความแตกต่างระหว่างข้อผิดพลาดแบบ `app-level` และแบบ `code-level`
+
+ข้อผิดพลาดแบบ `App-level` โดยทั่วไปเกิดจากการทำงานของผู้ใช้ และผู้ใช้งานก็สามารถจัดการพวกมันได้ ที่เห็นได้ชัดคือ ข้อผิดพลาดจากการตรวจสอบ ข้อผิดพลาดจากสิทธิการใช้งาน ข้อผิดพลาดจาก `not-found` และอื่นๆ ซึ่งข้อผิดพลาดเหล่านี้เป็นสิ่งที่เราต้องการแสดงต่อผู้ใช้เพื่อช่วยพวกเค้าแก้ไขปัญหาที่กำลังเกิดขึ้นได้
+
+ข้อผิดพลาดแบบ `Code-level` เป็นอีกเรื่องนึง ส่วนใหญ่เกิดมาจากบั๊กในโค้ดที่คุณเขียน คาดเดาไม่ได้ และคุณก็ไม่อยากจะแสดงให้ผู้ใช้เห็นโดยตรง แค่ต้องการติดตามตรวจสอบได้ก็พอ ซึ่งคุณอาจจะใช้บริการติดตามตรวจสอบข้อผิดพลาดที่ให้บริการอยู่ (เช่น [Kadira](http://kadira.io) ก็ได้)
+
+โดยในบทนี้เราจะเน้นที่ข้อผิดพลาดแบบแรก ไม่ใช่การไล่หาบั๊กแต่อย่างใด
+
+<% end %>
+
+### ทำให้เกิดข้อผิดพลาด
+
+ตอนนี้เราก็รู้วิธีการแสดงข้อความผิดพลาดแล้ว แต่เราก็ยังต้องทำให้เกิดข้อผิดพลาดขึ้นมาก่อน เพื่อเราจะได้เห็นข้อความผิดพลาดนั้น จริงๆแล้วที่ผ่านมาเรามีวิธีรับมือกับข้อผิดพลาดได้ดีอยู่แล้ว ในการเตือนเมื่อข่าวที่โพสท์ซ้ำกัน เราก็แค่แทนที่ `alert` ในตัวช่วยเหตุการณ์ `postSubmit`  ด้วยฟังก์ชัน `throwError` ดังนี้
 
 ~~~js
 Template.postSubmit.events({
   'submit form': function(e) {
     e.preventDefault();
-
+    
     var post = {
       url: $(e.target).find('[name=url]').val(),
-      title: $(e.target).find('[name=title]').val(),
-      message: $(e.target).find('[name=message]').val()
-    }
-
-    Meteor.call('post', post, function(error, id) {
-      if (error) {
-        // display the error to the user
-        throwError(error.reason);
-
-        if (error.error === 302)
-          Router.go('postPage', {_id: error.details})
-      } else {
-        Router.go('postPage', {_id: id});
-      }
+      title: $(e.target).find('[name=title]').val()
+    };
+    
+    Meteor.call('postInsert', post, function(error, result) {
+      // display the error to the user and abort
+      if (error)
+        return throwError(error.reason);
+      
+      // show this result but route anyway
+      if (result.postExists)
+        throwError('This link has already been posted');
+    
+      Router.go('postPage', {_id: result._id});  
     });
   }
 });
 ~~~
-<%= caption "client/views/posts/post_submit.js" %>
-<%= highlight "12~14, 16~21" %>
+<%= caption "client/templates/posts/post_submit.js" %>
+<%= highlight "13,17" %>
+
+ไหนๆเราก็แก้แล้ว เราก็ทำเหมือนเดิมในตัวช่วยเหตุการณ์ `postEdit`
+
+~~~js
+Template.postEdit.events({
+  'submit form': function(e) {
+    e.preventDefault();
+    
+    var currentPostId = this._id;
+    
+    var postProperties = {
+      url: $(e.target).find('[name=url]').val(),
+      title: $(e.target).find('[name=title]').val()
+    }
+    
+    Posts.update(currentPostId, {$set: postProperties}, function(error) {
+      if (error) {
+        // display the error to the user
+        throwError(error.reason);
+      } else {
+        Router.go('postPage', {_id: currentPostId});
+      }
+    });
+  },
+  //...
+});
+~~~
+<%= caption "client/templates/posts/post_edit.js" %>
+<%= highlight "15" %>
 
 <%= commit "9-2", "Actually use the error reporting." %>
 
-////
+ทดสอบกันดูหน่อย ลองสร้างโพสท์ข่าวใหม่โดยป้อน URL เป็น `http://meteor.com` ซ้ำกับข่าวตัวที่สร้างจากโค้ดไว้แล้ว คุณก็จะเห็นอะไรแบบนี้
 
-<%= screenshot "9-1", "Triggering an error" %>
+<%= screenshot "9-2", "Triggering an error" %>
 
-### Clearing Errors
+### ลบข้อผิดพลาด
 
-////
+คุณน่าจะสังเกตุเห็นว่า ข้อความผิดพลาดต่างๆจะเลือนหายไปเองในไม่กี่วินาที ซึ่งเป็นผลมาจากความมหัศจรรย์ของ CSS ที่เราใส่ไว้ในสไตล์ชีตตอนเริ่มต้นของหนังสือเล่มนี้
 
-////
-
-////
-
-////
-
-////
-
-~~~js
-// Local (client-only) collection
-Errors = new Meteor.Collection(null);
-
-throwError = function(message) {
-  Errors.insert({message: message, seen: false})
+~~~css
+@keyframes fadeOut {
+  0% {opacity: 0;}
+  10% {opacity: 1;}
+  90% {opacity: 1;}
+  100% {opacity: 0;}
 }
 
-clearErrors = function() {
-  Errors.remove({seen: true});
+//...
+
+.alert {
+  animation: fadeOut 2700ms ease-in 0s 1 forwards;
+  //...
 }
 ~~~
-<%= caption "client/helpers/errors.js" %>
-<%= highlight "5,8~10" %>
+<%= caption "client/stylesheets/style.css" %>
 
-////
+เราได้กำหนดอนิเมชั่นใน CSS  ชื่อ `fadeOut` ที่มี 4 คีย์เฟรม สำหรับค่าคุณสมบัติความทึบแสงต่างๆ (ที่ 0%, 10%, 90%, และ 100% ของระยะเวลาการเกิดอนิเมชั่น) และใช้อนิเมชั่นนี้กับคลาส `.alert`
 
-~~~js
-// ...
+อนิเมชั่นนี้จะจบลงในเวลา 2700 มิลลิวินาที เริ่มจากทำ `ease-in` ด้วยตัวหน่วง 0 วินาที จากนั้นรันหนึ่งครั้ง และสุดท้ายให้แสดงอยู่ที่คีย์เฟรมสุดท้ายหลังจากรันจบแล้ว
 
-Router.before(requireLogin, {only: 'postSubmit'})
-Router.before(function() { clearErrors() });
-~~~
-<%= caption "lib/router.js" %>
-<%= highlight "4" %>
+<% note do %>
 
-////
+### อนิเมชั่นแบบไหนดี
 
-////
+คุณอาจกำลังสงสัยว่าทำไมเราใช้อนิเมชั่นแบบ CSS (ซึ่งถูกกำหนดไว้ล่วงหน้าและอยู่นอกเหนือการควบคุมของแอพ) แทนที่จะใช้อนิเมชั่นที่ควบคุมจาก Meteor เอง
 
-////
+ถึงแม้ Meteor จะรองรับการสร้างอนิเมชั่นได้หลากหลาย แต่เนื่องจากเราต้องการให้บทนี้เน้นที่ข้อผิดพลาด เราจึงเลือกที่จะใช้อนิเมชั่นแบบง่ายๆของ CSS และเก็บสิ่งที่น่าสนใจไว้ในบทอนิเมชั่นโดยเฉพาะ
 
-////
+<% end %>
 
-////
+ดูเหมือนว่าจะใช้การได้แล้ว แต่ถ้าเกิดคุณทำให้เกิดข้อผิดพลาดหลายๆครั้ง (เช่น ป้อนค่าลิงก์ที่เหมือนๆกันซักสามครั้ง) คุณก็จะเห็นว่าข้อความถูกแสดงซ้อนทับกันหมด
+
+<%= screenshot "9-3", "Stack overflow." %>
+
+ที่เป็นแบบนี้ก็เพราะในขณะที่ตัว `.alert` ดูเลือนหายไป มันยังคงเก็บอยู่ใน DOM ไม่ได้หายไปไหน ซึ่งเป็นเรื่องที่เราต้องแก้ไข
+
+สถานะการณ์แบบนี้เข้าทาง Meteor พอดี เนื่องจากคอลเลกชั่นข้อผิดพลาดเป็นแหล่งข้อมูลแบบรีแอคทีฟ สิ่งที่เราต้องทำเพื่อกำจัดข้อความผิดพลาดเก่าๆก็คือ ลบมันออกจากคอลเลกชั่นเท่านั้น!
+
+โดยเราจะใช้คำสั่ง `Meteor.setTimeout` เพื่อกำหนดให้ฟังก์ชั่น callback ทำงานหลังจากเวลาสิ้นสุดลง (ในกรณีนี้คือ 3000 มิลลิวินาที)
 
 ~~~js
 Template.errors.helpers({
@@ -194,28 +237,318 @@ Template.errors.helpers({
   }
 });
 
-Template.error.rendered = function() {
+Template.error.onRendered(function() {
   var error = this.data;
-  Meteor.defer(function() {
-    Errors.update(error._id, {$set: {seen: true}});
-  });
-};
+  Meteor.setTimeout(function () {
+    Errors.remove(error._id);
+  }, 3000);
+});
 ~~~
-<%= caption "client/views/includes/errors.js" %>
+<%= caption "client/templates/includes/errors.js" %>
 <%= highlight "7~12" %>
 
-<%= commit "9-3", "Monitor which errors have been seen, and clear on routing." %>
+<%= commit "9-3", "Clear errors after 3 seconds." %>
 
-////
+เหตุการณ์ [`onRendered`](http://docs.meteor.com/#/full/template_onRendered) จะสั่งให้ฟังก์ชัน callback ทำงานหลังจากที่เทมเพลทถูกแสดงในเบราว์เซอร์แล้ว ในฟังก์ชัน callback นั้น `this` คือ ตัวเทมเพลทที่กำลังใช้งาน และ `this.data` ช่วยให้เราเข้าถึงข้อมูลที่กำลังแสดงอยู่ได้ (ในกรณีนี้คือ ข้อความผิดพลาด)
 
-////
+### ค้นหาความถูกต้อง
 
-<% note do %>
+จนถึงตรงนี้เรายังไม่ได้กำหนดวิธีการตรวจสอบหน้าฟอร์มของเราไว้เลย ซึ่งอย่างน้อยที่สุดที่เราต้องการก็คือ ให้ผู้ใช้ป้อนข่าวที่มีทั้ง URL และชื่อเข้ามา ดังนั้นเราก็ต้องทำให้แน่ใจว่าพวกเค้าจะทำอย่างนั้นได้
 
-### The `rendered` callback
+โดยเราจะทำสองเรื่อง เพื่อเตือนว่ามีข้อมูลตรงไหนที่ขาดหายไป เรื่องแรก เราจะใส่ CSS class ที่ `div` ตัวแม่ของฟิลด์ที่มีปัญหา และเรื่องที่สอง เราจะแสดงข้อความผิดพลาดที่มีประโยชน์ข้างใต้ฟิลด์นั้น
 
-////
+เราเริ่มด้วยการเตรียมเทมเพลท `postSubmit` ให้รองรับตัวช่วยใหม่ตามนี้
 
-////
+~~~html
+<template name="postSubmit">
+  <form class="main form page">
+    <div class="form-group {{errorClass 'url'}}">
+      <label class="control-label" for="url">URL</label>
+      <div class="controls">
+          <input name="url" id="url" type="text" value="" placeholder="Your URL" class="form-control"/>
+          <span class="help-block">{{errorMessage 'url'}}</span>
+      </div>
+    </div>
+    <div class="form-group {{errorClass 'title'}}">
+      <label class="control-label" for="title">Title</label>
+      <div class="controls">
+          <input name="title" id="title" type="text" value="" placeholder="Name your post" class="form-control"/>
+          <span class="help-block">{{errorMessage 'title'}}</span>
+      </div>
+    </div>
+    <input type="submit" value="Submit" class="btn btn-primary"/>
+  </form>
+</template>
+~~~
+<%= caption "client/templates/posts/post_submit.html" %>
+<%= highlight "3,7,10,14" %>
 
-<% end %>
+สังเกตุด้วยว่าเราส่งค่าพารามิเตอร์ (`url` และ `title` ตามลำดับ) ไปที่ฟังก์ชั่นตัวช่วยแต่ละตัว โดยเรียกใช้ตัวช่วยตัวเดียวกันซ้ำสองครั้ง แต่เปลี่ยนการทำงานของมันตามค่าพารามิเตอร์ที่ส่งเข้าไป
+
+ได้เวลาสนุกกันแล้ว ตอนนี้เราจะลองเอาตัวช่วยพวกนี้มาใช้ให้เกิดประโยชน์กันดู
+
+เราจะใช้ **เซสชั่น** เพื่อเก็บค่าอ็อบเจกต์ `postSubmitErrors` ที่มีข้อความผิดพลาดอยู่ข้างใน เมื่อผู้ใช้ทำงานกับฟอร์มอ็อบเจกต์นี้จะเปลี่ยนแปลงค่าไปและทำให้เกิดการอัพเดทที่หน้าจอแบบรีแอคทีฟ
+
+แรกสุด เราจะกำหนดค่าเริ่มต้นให้อ็อบเจกต์นี้เมื่อเทมเพลท `postSubmit` ถูกสร้างขึ้น เพื่อให้แน่ใจว่าผู้ใช้จะไม่เห็นข้อความผิดพลาดเดิมจากการใช้งานก่อนหน้านั้น
+
+จากนั้นเราจะสร้างตัวช่วยเทมเพลทขึ้นมาสองตัว ที่คอยตรวจดูค่าคุณสมบัติ `field` ของ `Session.get('postSubmitErrors')` (โดยที่ `field` เป็นได้ทั้ง `url` หรือ `title` ขึ้นอยู่กับว่าเราเรียกใช้ตัวช่วยเทมเพลทจากตรงไหน)
+
+โดยตัวช่วย `errorMessage` จะคืนค่าข้อความผิดพลาดมาให้ แต่ `errorClass` จะตรวจดูว่า *มี* ข้อความหรือไม่ และคืนค่า `has-error` ถ้าพบว่ามีข้อความอยู่
+
+~~~js
+Template.postSubmit.onCreated(function() {
+  Session.set('postSubmitErrors', {});
+});
+
+Template.postSubmit.helpers({
+  errorMessage: function(field) {
+    return Session.get('postSubmitErrors')[field];
+  },
+  errorClass: function (field) {
+    return !!Session.get('postSubmitErrors')[field] ? 'has-error' : '';
+  }
+});
+
+//...
+~~~
+<%= caption "client/templates/posts/post_submit.js" %>
+<%= highlight "1~12" %>
+
+คุณสามารถทดสอบตัวช่วยว่าทำงานถูกต้องหรือไม่ โดยเปิดคอนโซลของเบราว์เซอร์และป้อนโค้ดต่อไปนี้
+
+~~~js
+Session.set('postSubmitErrors', {title: 'Warning! Intruder detected. Now releasing robo-dogs.'});
+~~~
+<%= caption "Browser console" %>
+
+<%= screenshot "9-4", "Red alert! Red alert!" %>
+
+ขั้นตอนต่อไปคือ ผูกค่าของเซสชั่นอ็อบเจกต์ `postSubmitErrors` เข้ากับฟอร์ม
+
+ก่อนที่จะทำตรงนั้น ให้เราสร้างฟังก์ชันใหม่ `validatePost` ใน `posts.js` เพื่อใช้ตรวจดูอ็อบเจกต์ `post` และคืนอ็อบเจกต์ `errors` ที่ประกอบด้วยข้อความผิดพลาดที่เกิดขึ้น (โดยตั้งชื่อคีย์เป็น `title` หรือ `url` ตามชื่อฟิลด์ที่ขาดหายไป )
+
+~~~js
+//...
+
+validatePost = function (post) {
+  var errors = {};
+
+  if (!post.title)
+    errors.title = "Please fill in a headline";
+  
+  if (!post.url)
+    errors.url =  "Please fill in a URL";
+
+  return errors;
+}
+
+//...
+~~~
+<%= caption "lib/collections/posts.js" %>
+<%= highlight "3~13" %>
+
+ซึ่งเราจะเรียกใช้ฟังก์ชันนี้จากตัวช่วยเหตุการณ์ `postSubmit`
+
+~~~js
+Template.postSubmit.events({
+  'submit form': function(e) {
+    e.preventDefault();
+    
+    var post = {
+      url: $(e.target).find('[name=url]').val(),
+      title: $(e.target).find('[name=title]').val()
+    };
+    
+    var errors = validatePost(post);
+    if (errors.title || errors.url)
+      return Session.set('postSubmitErrors', errors);
+    
+    Meteor.call('postInsert', post, function(error, result) {
+      // display the error to the user and abort
+      if (error)
+        return throwError(error.reason);
+      
+      // show this result but route anyway
+      if (result.postExists)
+        throwError('This link has already been posted');
+    
+      Router.go('postPage', {_id: result._id});  
+    });
+  }
+});
+~~~
+<%= caption "client/templates/posts/post_submit.js" %>
+<%= highlight "10~12" %>
+
+ให้สังเกตุด้วยว่า ที่เราใช้ `return` ก็เพื่อยกเลิกการทำงานของตัวช่วยเมื่อเกิดความผิดพลาดขึ้น แต่ไม่ใช่เพราะเราต้องการคืนค่านี้ออกมา 
+
+<%= screenshot "9-5", "Caught red-handed." %>
+
+### การตรวจสอบฝั่งเซิร์ฟเวอร์
+
+ดูเหมือนว่าเรายังทำไม่เสร็จซะทีเดียว เราได้ตรวจสอบว่ามีค่าข้อมูล URL และชื่อของข่าวที่ฝั่ง *ไคลเอนต์* แต่บนฝั่ง *เซิร์ฟเวอร์* ล่ะ อาจมีใครบางคนพยายามป้อนโพสท์ข่าวแบบว่างๆ ด้วยการเรียกใช้เมธอด `postInsert` ผ่านคอนโซลของเบราว์เซอร์โดยตรง
+
+ถึงแม้ว่าเราไม่จำเป็นต้องแสดงข้อความผิดพลาดบนเซิร์ฟเวอร์ เราก็ยังสามารถใช้ฟังก์ชัน `validatePost` ตัวเดิมได้ เว้นเสียแต่ว่า ครั้งนี้เราจะเรียกใช้มันจากในเมธอด `postInsert` ไม่ใช่แค่เรียกใช้จากตัวช่วยเหตุการณ์เท่านั้น 
+
+~~~js
+Meteor.methods({
+  postInsert: function(postAttributes) {
+    check(this.userId, String);
+    check(postAttributes, {
+      title: String,
+      url: String
+    });
+    
+    var errors = validatePost(postAttributes);
+    if (errors.title || errors.url)
+      throw new Meteor.Error('invalid-post', "You must set a title and URL for your post");
+    
+    var postWithSameLink = Posts.findOne({url: postAttributes.url});
+    if (postWithSameLink) {
+      return {
+        postExists: true,
+        _id: postWithSameLink._id
+      }
+    }
+    
+    var user = Meteor.user();
+    var post = _.extend(postAttributes, {
+      userId: user._id, 
+      author: user.username, 
+      submitted: new Date()
+    });
+    
+    var postId = Posts.insert(post);
+    
+    return {
+      _id: postId
+    };
+  }
+});
+~~~
+<%= caption "lib/collections/posts.js" %>
+<%= highlight "9~11" %>
+
+ย้ำอีกครั้งว่า ผู้ใช้งานผ่านหน้าจอปกติไม่ควรต้องเห็นข้อความ "You must set a title and URL for your post" นี้ เพราะว่ามันจะปรากฎให้เห็นเฉพาะกับผู้ที่ใช้งานโดยไม่ผ่านหน้าจอปกติแต่ใช้งานผ่านคอนโซลโดยตรงเท่านั้น 
+
+ลองทดสอบกันดู โดยเปิดคอนโซลของเบราว์เซอร์ แล้วลองป้อนโพสท์ข่าวที่ไม่มี URL ตามนี้
+
+~~~js
+Meteor.call('postInsert', {url: '', title: 'No URL here!'});
+~~~
+
+ถ้าเราทำทุกอย่างถูกต้อง คุณจะได้รับโค้ดข้อมูลที่ค่อนข้างเยอะกลับมาพร้อมด้วยข้อความ "You must set a title and URL for your post"
+
+<%= commit "9-4", "Validate post contents on submission." %>
+
+### ตรวจสอบเมื่อทำการแก้ไข
+
+เพื่อให้งานเรียบร้อย เราจะใช้วิธีการตรวจสอบแบบเดียวกันมาใช้กับหน้าฟอร์ม *edit* ของเราเช่นกัน โดยโค้ดที่ได้จะดูคล้ายๆกัน ตัวแรกคือเทมเพลท
+
+~~~html
+<template name="postEdit">
+  <form class="main form page">
+    <div class="form-group {{errorClass 'url'}}">
+      <label class="control-label" for="url">URL</label>
+      <div class="controls">
+          <input name="url" id="url" type="text" value="{{url}}" placeholder="Your URL" class="form-control"/>
+          <span class="help-block">{{errorMessage 'url'}}</span>
+      </div>
+    </div>
+    <div class="form-group {{errorClass 'title'}}">
+      <label class="control-label" for="title">Title</label>
+      <div class="controls">
+          <input name="title" id="title" type="text" value="{{title}}" placeholder="Name your post" class="form-control"/>
+          <span class="help-block">{{errorMessage 'title'}}</span>
+      </div>
+    </div>
+    <input type="submit" value="Submit" class="btn btn-primary submit"/>
+    <hr/>
+    <a class="btn btn-danger delete" href="#">Delete post</a>
+  </form>
+</template>
+~~~
+<%= caption "client/templates/posts/post_edit.html" %>
+<%= highlight "3,7,10,14" %>
+
+ต่อมาก็ตัวช่วยเทมเพลท
+
+~~~js
+Template.postEdit.onCreated(function() {
+  Session.set('postEditErrors', {});
+});
+
+Template.postEdit.helpers({
+  errorMessage: function(field) {
+    return Session.get('postEditErrors')[field];
+  },
+  errorClass: function (field) {
+    return !!Session.get('postEditErrors')[field] ? 'has-error' : '';
+  }
+});
+
+Template.postEdit.events({
+  'submit form': function(e) {
+    e.preventDefault();
+    
+    var currentPostId = this._id;
+    
+    var postProperties = {
+      url: $(e.target).find('[name=url]').val(),
+      title: $(e.target).find('[name=title]').val()
+    }
+    
+    var errors = validatePost(postProperties);
+    if (errors.title || errors.url)
+      return Session.set('postEditErrors', errors);
+    
+    Posts.update(currentPostId, {$set: postProperties}, function(error) {
+      if (error) {
+        // display the error to the user
+        throwError(error.reason);
+      } else {
+        Router.go('postPage', {_id: currentPostId});
+      }
+    });
+  },
+  
+  'click .delete': function(e) {
+    e.preventDefault();
+    
+    if (confirm("Delete this post?")) {
+      var currentPostId = this._id;
+      Posts.remove(currentPostId);
+      Router.go('postsList');
+    }
+  }
+});
+~~~
+<%= caption "client/templates/posts/post_edit.js" %>
+<%= highlight "1~12,25~27,32" %>
+
+ก็เหมือนกับที่เราทำกับฟอร์มสร้างโพสท์ข่าว เราต้องตรวจสอบความถูกต้องของโพสท์ข่าวที่เซิร์ฟเวอร์ด้วย ยกเว้นแต่ว่า เราไม่ได้ใช้เมธอดเพื่อแก้ไขข่าว แต่เรียกใช้ `update` โดยตรงจากไคลเอนต์ ถ้าคุณยังจำได้
+
+นั่นหมายความว่า เราจะต้องเพิ่มฟังก์ชัน callback แบบ `deny` ตัวใหม่เข้าไปแทน
+
+~~~js
+//...
+
+Posts.deny({
+  update: function(userId, post, fieldNames, modifier) {
+    var errors = validatePost(modifier.$set);
+    return errors.title || errors.url;
+  }
+});
+
+//...
+~~~
+<%= caption "lib/collections/posts.js" %>
+<%= highlight "3~8" %>
+
+ให้สังเกตุว่าตัวแปร `post` ที่รับเข้ามาคือ โพสท์ข่าว *เดิม* ซึ่งในกรณีนี้เราต้องการตรวจสอบความถูกต้องของการ *อัพเดท* เราถึงเรียกใช้ `validatePost` กับคุณสมบัติ `$set` ของตัว `modifier` (เหมือนใน `Posts.update({$set: {title: ..., url: ...}})`)
+
+ที่ใช้แบบนี้ได้ก็เพราะว่า ใน `modifier.$set` ประกอบด้วยค่าของ `title` และ `url` ค่าเดียวกันกับที่อ็อบเจกต์ `post` ทั้งอ็อบเจกต์มี และยังหมายความได้อีกว่า การอัพเดทที่มีแต่ค่าของ `title` หรือ `url` จะไม่สามารถเกิดขึ้นได้แน่นอน ซึ่งไม่ใช่ปัญหาในการใช้งานจริง
+
+คุณอาจสังเกตุเห็นว่า ฟังก์ชัน callback แบบ `deny` นี้เป็นตัวที่สอง เมื่อเราเพิ่มฟังก์ชัน callback แบบ `deny`เข้าไปหลายตัว การทำงานจะถูกยกเลิกเมื่อตัวใดตัวหนึ่งมีค่าเป็น `true` สำหรับในกรณีนี้จะหมายความได้ว่า `update` จะเกิดขึ้นได้เมื่อทำกับฟิลด์ `title` และ `url` เท่านั้น และจะต้องไม่มีตัวใดตัวหนึ่งมีค่าว่างด้วย
+
+<%= commit "9-5", "Validate post contents when editing." %>
