@@ -1,68 +1,74 @@
 ---
-title: การสร้างแพ็กเกจสำหรับ Meteorite
+title: การสร้างแพ็คเกจ Meteor
 slug: creating-a-meteorite-package
 date: 0009/01/02
 number: 9.5
 sidebar: true
-contents: Write a local in-app package.|Write some tests for your package.|Release your package on Atmosphere.
+contents: เขียนแพ็คเกจแบบโลคอล|เขียนโค้ดทดสอบกับแพ็คเกจของคุณ|ปล่อยแพ็คเกจคุณไปที่ Atmosphere
 paragraphs: 22
 ---
 
-////
+เราได้สร้างวิธีการจัดการข้อผิดพลาดที่สามารถนำกลับมาใช้ได้ใหม่ ทำไมเราไม่ทำให้เป็นสมาร์ทแพ็คเกจแล้วแบ่งปันให้กับชุมชน Meteor กันล่ะ
 
-////
+ก่อนที่จะเริ่มต้น เราจำเป็นต้องแน่ใจว่าเราได้ลงทะเบียนเป็นนักพัฒนาของ Meteor กันไว้แล้ว โดยคุณสามารถเข้าไปลงทะเบียนได้ที่ [meteor.com](meteor.com) แต่เราคาดว่าคุณน่าจะทำกันไว้เรียบร้อยแล้วตั้งแต่ตอนที่คุณลงชื่อเข้าใช้หนังสือเล่มนี้ ซึ่งไม่ว่าคุณจะได้มันมาตอนไหน ที่คุณจำเป็นต้องใช้มากในบทนี้ก็คือ ชื่อผู้ใช้ที่คุณสมัครไว้
 
-////
+เราจะใช้ชื่อผู้ใช้ในบทนี้ว่า `tmeasday` ซึ่งคุณสามารถเปลี่ยนเป็นชื่อผู้ใช้ของคุณได้เลย
+
+แรกสุดเราจำเป็นต้องมีโครงสร้างไฟล์สำหรับเก็บแพ็คเกจของเราซะก่อน เราทำได้ด้วยคำสั่ง `meteor create --package tmeasday:errors` ซึ่ง Meteor จะทำการสร้างโฟลเดอร์ชื่อ `packages/tmeasday:errors/` ที่มีไฟล์บางไฟล์อยู่ข้างใน เราจะเริ่มต้นด้วยการแก้ไข `package.js` ไฟล์ที่บอก Meteor ให้รู้ว่าแพ็คเกจจะถูกใช้งานอย่างไร และมีอ็อบเจกต์หรือฟังก์ชันตัวไหนที่ถูกเรียกใช้จากภายนอกได้บ้าง
 
 ~~~js
 Package.describe({
-  summary: "A pattern to display application errors to the user"
+  name: "tmeasday:errors",
+  summary: "A pattern to display application errors to the user",
+  version: "1.0.0"
 });
 
-Package.on_use(function (api, where) {
+Package.onUse(function (api, where) {
+  api.versionsFrom('0.9.0');
+  
   api.use(['minimongo', 'mongo-livedata', 'templating'], 'client');
 
-  api.add_files(['errors.js', 'errors_list.html', 'errors_list.js'], 'client');
-
-  if (api.export)
+  api.addFiles(['errors.js', 'errors_list.html', 'errors_list.js'], 'client');
+  
+  if (api.export) 
     api.export('Errors');
 });
 ~~~
-<%= caption "packages/errors/package.js" %>
+<%= caption "packages/tmeasday:errors/package.js" %>
 
-////
+ในการพัฒนาแพ็คเกจเพื่อการใช้งานจริงนั้น คุณควรกรอกข้อมูลลงในเซ็คชั่น `git` ของบล็อก `Package.describe` ด้วยตำแหน่ง URL ของ Git  repository ของคุณ (เช่น `https://github.com/tmeasday/meteor-errors.git`) ซึ่งจะทำให้ผู้ใช้งานสามารถเข้าไปดูซอร์สโค้ด และไฟล์ readme ของแพ็คเกจคุณ (สมมุติว่าคุณใช้ GitHub) ก็จะถูกนำมาแสดงใน Atmosphere ด้วย
+
+เราจะเพิ่มไฟล์ 3 ไฟล์เข้าไปที่แพ็คเกจ (เราสามารถลบไฟล์ที่ Meteor สร้างให้เราได้) โดยเราสามารถดึงไฟล์นี้มาจาก Microscope โดยไม่ต้องเปลี่ยนอะไรมาก นอกจากตรงที่กำหนด namespace และปรับ API ให้ดูง่ายขึ้นเล็กน้อย
 
 ~~~js
 Errors = {
   // Local (client-only) collection
-  collection: new Meteor.Collection(null),
-
+  collection: new Mongo.Collection(null),
+  
   throw: function(message) {
     Errors.collection.insert({message: message, seen: false})
-  },
-  clearSeen: function() {
-    Errors.collection.remove({seen: true});
   }
 };
-
 ~~~
-<%= caption "packages/errors/errors.js" %>
+<%= caption "packages/tmeasday:errors/errors.js" %>
 
 ~~~html
 <template name="meteorErrors">
-  {{#each errors}}
-    {{> meteorError}}
-  {{/each}}
+  <div class="errors">
+    {{#each errors}}
+      {{> meteorError}}
+    {{/each}}
+  </div>
 </template>
 
 <template name="meteorError">
-  <div class="alert alert-error">
+  <div class="alert alert-danger" role="alert">
     <button type="button" class="close" data-dismiss="alert">&times;</button>
     {{message}}
   </div>
 </template>
 ~~~
-<%= caption "packages/errors/errors_list.html" %>
+<%= caption "packages/tmeasday:errors/errors_list.html" %>
 
 ~~~js
 Template.meteorErrors.helpers({
@@ -73,174 +79,138 @@ Template.meteorErrors.helpers({
 
 Template.meteorError.rendered = function() {
   var error = this.data;
-  Meteor.defer(function() {
-    Errors.collection.update(error._id, {$set: {seen: true}});
-  });
+  Meteor.setTimeout(function () {
+    Errors.collection.remove(error._id);
+  }, 3000);
 };
 ~~~
-<%= caption "packages/errors/errors_list.js" %>
+<%= caption "packages/tmeasday:errors/errors_list.js" %>
 
-### Testing the package out with Microscope
+### ทดสอบแพ็คเกจด้วย Microscope
 
-////
+ตอนนี้เราจะมาทดสอบแบบโลคอลกันด้วย Microscope เพื่อให้แน่ใจว่าโค้ดที่เราเปลี่ยนไปยังทำงานได้ ด้วยการรันคำสั่ง `meteor add tmeasday:errors` เพื่อเชื่อมแพ็คเกจเข้ากับแอพของเรา จากนั้นก็ลบไฟล์เดิมที่ซ้ำกับแพ็คเกจใหม่
 
 ~~~bash
-$ rm client/helpers/errors.js
-$ rm client/views/includes/errors.html
-$ rm client/views/includes/errors.js
+rm client/helpers/errors.js
+rm client/templates/includes/errors.html
+rm client/templates/includes/errors.js
 ~~~
 <%= caption "removing old files on the bash console" %>
 
-////
-
-~~~js
-Router.before(function() { Errors.clearSeen(); });
-~~~
-<%= caption "lib/router.js" %>
+อีกเรื่องนึงที่เราต้องทำคือ อัพเดทโค้ดอีกนิดเพื่อเรียกใช้ API ให้ถูกต้อง
 
 ~~~html
   {{> header}}
   {{> meteorErrors}}
 ~~~
-<%= caption "client/views/application/layout.html" %>
+<%= caption "client/templates/application/layout.html" %>
 
 ~~~js
-Meteor.call('post', post, function(error, id) {
+Meteor.call('postInsert', post, function(error, result) {
   if (error) {
     // display the error to the user
     Errors.throw(error.reason);
 
 ~~~
-<%= caption "client/views/posts/post_submit.js" %>
+<%= caption "client/templates/posts/post_submit.js" %>
 
 ~~~js
 Posts.update(currentPostId, {$set: postProperties}, function(error) {
   if (error) {
     // display the error to the user
     Errors.throw(error.reason);
+    
+  // show this result but route anyway
+  if (result.postExists)
+    Errors.throw('This link has already been posted');
 ~~~
-<%= caption "client/views/posts/post_edit.js" %>
+<%= caption "client/templates/posts/post_edit.js" %>
+<%= highlight "4,8" %>
 
 <%= scommit "9-5-1", "Created basic errors package and linked it in." %>
 
-////
+หลังจากการเปลี่ยนแปลงทั้งหมดนี้แล้ว เราก็ควรจะได้ความสามารถเดิมของแอพก่อนติดตั้งแพคเกจกลับมา
 
-### Writing tests
+### เขียนโค้ดทดสอบ
 
-////
+ขั้นแรกในการพัฒนาแพ็คเกจคือ ทดสอบมันกับแอปพลิเคชั่น ส่วนขั้นต่อไปคือ เขียนโค้ดทดสอบเพื่อทดสอบการทำงานของแพ็คเกจ โดยตัว Meteor มาพร้อมกับ Tinytest (ตัวทดสอบแพ็คเกจ) ซึ่งช่วยให้การรันโค้ดทดสอบทำได้ง่ายๆ และทำให้เราสบายใจเมื่อแบ่งปันแพ็คเกจนี้ให้คนอื่นไปใช้
 
-////
+ลองมาสร้างไฟล์ทดสอบที่ใช้ Tinytest รันการทดสอบกับโค้ดของแพ็คเกจกันดู
 
 ~~~js
-Tinytest.add("Errors collection works", function(test) {
+Tinytest.add("Errors - collection", function(test) {
   test.equal(Errors.collection.find({}).count(), 0);
-
+  
   Errors.throw('A new error!');
   test.equal(Errors.collection.find({}).count(), 1);
-
+  
   Errors.collection.remove({});
 });
 
-Tinytest.addAsync("Errors template works", function(test, done) {
+Tinytest.addAsync("Errors - template", function(test, done) {  
   Errors.throw('A new error!');
-  test.equal(Errors.collection.find({seen: false}).count(), 1);
-
+  test.equal(Errors.collection.find({}).count(), 1);
+  
   // render the template
-  OnscreenDiv(Spark.render(function() {
-    return Template.meteorErrors();
-  }));
-
-  // wait a few milliseconds
+  UI.insert(UI.render(Template.meteorErrors), document.body);
+  
   Meteor.setTimeout(function() {
-    test.equal(Errors.collection.find({seen: false}).count(), 0);
-    test.equal(Errors.collection.find({}).count(), 1);
-    Errors.clearSeen();
-
-    test.equal(Errors.collection.find({seen: true}).count(), 0);
+    test.equal(Errors.collection.find({}).count(), 0);
     done();
-  }, 500);
+  }, 3500);
 });
 ~~~
-<%= caption "packages/errors/errors_tests.js" %>
+<%= caption "packages/tmeasday:errors/errors_tests.js" %>
 
-////
+การทดสอบพวกนี้ เป็นการตรวจสอบพื้นฐานการทำงานของ `Meteor.Errors` และยังตรวจสอบซ้ำว่าโค้ดที่ถูก `rendered` ในเทมเพลทยังคงทำงานได้
 
-////
+เราจะไม่พูดลึกลงไปถึงการเขียนโค้ดเพื่อทดสอบแพ็คเกจของ Meteor (เพราะว่า API ยังไม่นิ่งและเข้าที่เข้าทางเท่าไหร่) แต่ก็หวังว่า โค้ดได้อธิบายการทำงานด้วยตัวมันเองไว้พอสมควรอยู่แล้ว
 
-////
+การกำหนดให้ Meteor รันการทดสอบอย่างไรนั้น ให้ใช้โค้ดต่อไปนี้ในไฟล์ `package.js`  
 
 ~~~js
-Package.on_test(function(api) {
-  api.use('errors', 'client');
-  api.use(['tinytest', 'test-helpers'], 'client');
-
-  api.add_files('errors_tests.js', 'client');
+Package.onTest(function(api) {
+  api.use('tmeasday:errors', 'client');
+  api.use(['tinytest', 'test-helpers'], 'client');  
+  
+  api.addFiles('errors_tests.js', 'client');
 });
 ~~~
-<%= caption "packages/errors/package.js" %>
+<%= caption "packages/tmeasday:errors/package.js" %>
 
 <%= scommit "9-5-2", "Added tests to the package." %>
 
-////
+จากนั้นเราก็รันคำสั่งทดสอบด้วย
 
 ~~~bash
-$ meteor test-packages errors
+meteor test-packages tmeasday:errors
 ~~~
 <%= caption "Terminal" %>
 
 <%= screenshot "s7-1", "Passing all tests" %>
 
-### Releasing the package
+### ปล่อยแพ็คเกจ
 
-////
+ตอนนี้เราต้องการที่จะปล่อยแพ็คเกจ และทำให้เรียกไปใช้ได้ทั่วโลก เราทำได้โดยส่งแพ็คเกจไปที่เซิร์ฟเวอร์จัดการแพ็คเกจของ Meteor เพื่อให้แพ็คเกจเราไปอยู่บน Atmosphere
 
-////
-
-~~~json
-{
-  "name": "errors",
-  "description": "A pattern to display application errors to the user",
-  "homepage": "https://github.com/tmeasday/meteor-errors",
-  "author": "Tom Coleman <tom@thesnail.org>",
-  "version": "0.1.0",
-  "git": "https://github.com/tmeasday/meteor-errors.git",
-  "packages": {
-  }
-}
-~~~
-<%= caption "packages/errors/smart.json" %>
-
-<%= scommit "9-5-3", "Added a smart.json" %>
-
-////
-
-////
-
-////
+โชคดีที่มันง่ายมากๆ เราแค่ `cd` เข้าไปในโฟลเดอร์ของแพ็คเกจ แล้วรันคำสั่ง `meteor publish --create`
 
 ~~~bash
-$ git init
-$ git add -A
-$ git commit -m "Created Errors Package"
-$ git remote add origin https://github.com/tmeasday/meteor-errors.git
-$ git push origin master
-$ mrt release .
-Done!
+cd packages/tmeasday:errors
+meteor publish --create
 ~~~
-<%= caption "Terminal (run from within `packages/errors`)" %>
+<%= caption "Terminal" %>
 
-////
-
-////
-
-////
+เมื่อแพ็คเกจก็ถูกปล่อยออกไปแล้ว เราก็สามารถลบมันออกจากแอพ และเพิ่มมันเข้าไปที่แอพตรงๆแบบนี้
 
 ~~~bash
-$ rm -r packages/errors
-$ mrt add errors
+rm -r packages/errors
+meteor add tmeasday:errors
 ~~~
 <%= caption "Terminal (run from the top level of the app)" %>
 
 <%= scommit "9-5-4", "Removed package from development tree." %>
 
-////
+ตอนนี้เราก็เห็น Meteor โหลดแพ็คเกจของเราเป็นครั้งแรกแล้ว เยี่ยมมาก!
+
+และก็เหมือนกับบทแทรกอื่นๆ ที่ีคุณต้องแน่ใจว่าได้ยกเลิกการเปลี่ยนแปลงที่เกิดขึ้น ก่อนที่จะไปต่อ (หรือไม่คุณก็ต้องจัดการกับมันเมื่อคุณทำตามเรื่องที่เหลือของหนังสือนี้)
