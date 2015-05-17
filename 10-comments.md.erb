@@ -1,21 +1,21 @@
 ---
-title: ความคิดเห็น (Comments)
+title: ข้อคิดเห็น
 slug: comments
 complete: 100
 date: 0010/01/01
 number: 10
-contents: Display existing comments.|Add a comment posting form.|Learn how to load only the current post's comments.|Add a comment count property to posts.
+contents: แสดงข้อคิดเห็นที่มีอยู่|เพิ่มฟอร์มป้อนข้อคิดเห็น|รู้วิธีโหลดเฉพาะข้อคิดเห็นล่าสุด|ใส่จำนวนข้อคิดเห็นลงในข่าว
 paragraphs: 34
 ---
 
-////
+เป้าหมายของเว็บข่าวสังคมก็คือ การสร้างชุมชนผู้ใช้ ซึ่งจะเป็นเรื่องยากหากไม่มีช่องทางให้ผู้คนพูดคุยกันได้ ดังนั้นในบทนี้เราจะมาเพิ่มข้อคิดเห็นกัน !
 
-////
+เราจะเริ่มด้วยการสร้างคอลเลกชั่นใหม่เพื่อเก็บข้อคิดเห็น และตามด้วยการสร้างข้อมูลพื้นฐานบางส่วนใส่เข้าไปในคอลเลกชั่น
 
 ~~~js
-Comments = new Meteor.Collection('comments');
+Comments = new Mongo.Collection('comments');
 ~~~
-<%= caption "collections/comments.js" %>
+<%= caption "lib/collections/comments.js" %>
 
 ~~~js
 // Fixture data
@@ -37,14 +37,14 @@ if (Posts.find().count() === 0) {
     userId: sacha._id,
     author: sacha.profile.name,
     url: 'http://sachagreif.com/introducing-telescope/',
-    submitted: now - 7 * 3600 * 1000
+    submitted: new Date(now - 7 * 3600 * 1000)
   });
 
   Comments.insert({
     postId: telescopeId,
     userId: tom._id,
     author: tom.profile.name,
-    submitted: now - 5 * 3600 * 1000,
+    submitted: new Date(now - 5 * 3600 * 1000),
     body: 'Interesting project Sacha, can I get involved?'
   });
 
@@ -52,7 +52,7 @@ if (Posts.find().count() === 0) {
     postId: telescopeId,
     userId: sacha._id,
     author: sacha.profile.name,
-    submitted: now - 3 * 3600 * 1000,
+    submitted: new Date(now - 3 * 3600 * 1000),
     body: 'You sure can Tom!'
   });
 
@@ -61,7 +61,7 @@ if (Posts.find().count() === 0) {
     userId: tom._id,
     author: tom.profile.name,
     url: 'http://meteor.com',
-    submitted: now - 10 * 3600 * 1000
+    submitted: new Date(now - 10 * 3600 * 1000)
   });
 
   Posts.insert({
@@ -69,13 +69,13 @@ if (Posts.find().count() === 0) {
     userId: tom._id,
     author: tom.profile.name,
     url: 'http://themeteorbook.com',
-    submitted: now - 12 * 3600 * 1000
+    submitted: new Date(now - 12 * 3600 * 1000)
   });
 }
 ~~~
 <%= caption "server/fixtures.js" %>
 
-////
+และก็ต้องไม่ลืมที่จะเผยแพร่และบอกรับข้อมูลให้กับคอลเลกชั่นใหม่นี้ด้วย
 
 ~~~js
 Meteor.publish('posts', function() {
@@ -93,38 +93,41 @@ Meteor.publish('comments', function() {
 Router.configure({
   layoutTemplate: 'layout',
   loadingTemplate: 'loading',
+  notFoundTemplate: 'notFound',
   waitOn: function() {
     return [Meteor.subscribe('posts'), Meteor.subscribe('comments')];
   }
 });
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "4~6" %>
+<%= highlight "5~7" %>
 
 <%= commit "10-1", "Added comments collection, pub/sub and fixtures." %>
 
-////
+จำไว้ว่า ถ้าเราต้องการให้โค้ดสร้างข้อมูลชุดนี้ทำงาน เราจำเป็นต้องสั่ง `meteor reset` เพื่อลบข้อมูลทั้งหมด หลังจากรีเซ็ทแล้ว อย่าลืมสร้างบัญชีผู้ใช้ใหม่แล้วล็อกอินด้วยล่ะ !
 
-////
+ขั้นแรก เราสร้างข้อมูลผู้ใช้ (หลอกๆ) ขึ้นมาสองสามรายการ ใส่มันเข้าไปในฐานข้อมูล แล้วนำค่า `id` ที่ได้มาสร้างอ็อบเจกต์ผู้ใช้โดยค้นหาจากฐานข้อมูลอีกที จากนั้นก็ใส่ข้อคิดเห็นเข้าไปที่ข่าวแรก โดยเชื่อมข้อคิดเห็นเข้ากับข่าว (ด้วย `postId`) และกับผู้ใช้ (ด้วย `userId`) นอกจากนี้เรายังใส่วันที่ป้อนข่าว และเนื้อหาข้อคิดเห็น ตามด้วยชื่อผู้เขียน `author` ที่เป็นฟิลด์แบบ denormalized ด้วย
 
-////
+อีกทั้งเรายังบอกตัวจัดการเส้นทางให้รอข้อมูล *อาร์เรย์* ที่ได้จากการบอกรับข้อมูลข้อคิดเห็นและข้อมูลข่าวด้วย
 
-### Displaying comments
+### แสดงข้อคิดเห็น
 
-////
+ข้อคิดเห็นก็ถูกใส่เข้าไปในฐานข้อมูลแล้ว ที่เราต้องทำต่อคือ ดึงมันออกมาแสดงในหน้าข่าวด้วยวิธีที่ตอนนี้คุณคงคุ้นเคยกันแล้ว และพอจะรู้ว่า ขั้นตอนต่อไปเราต้องทำอะไรกันบ้าง
 
 ~~~html
 <template name="postPage">
-  {{> postItem}}
+  <div class="post-page page">
+    {{> postItem}}
 
-  <ul class="comments">
-    {{#each comments}}
-      {{> comment}}
-    {{/each}}
-  </ul>
+    <ul class="comments">
+      {{#each comments}}
+        {{> commentItem}}
+      {{/each}}
+    </ul>
+  </div>
 </template>
 ~~~
-<%= caption "client/views/posts/post_page.html" %>
+<%= caption "client/templates/posts/post_page.html" %>
 <%= highlight "3~7" %>
 
 ~~~js
@@ -134,15 +137,15 @@ Template.postPage.helpers({
   }
 });
 ~~~
-<%= caption "client/views/posts/post_page.js" %>
+<%= caption "client/templates/posts/post_page.js" %>
 <%= highlight "2~4" %>
 
-////
+เราใส่บล็อกตัวช่วย `{{#each comments}}` ลงในเทมเพลทหน้าข่าว ดังนั้น `this` ในตัวช่วย `comments`   ก็คือ ข่าวที่โพสท์ การค้นหาข้อคิดเห็นของข่าวทำได้โดยดึงข้อคิดเห็นที่เชื่อมโยงกับข่าวนั้นผ่านฟิลด์ `postId` 
 
-////
+ด้วยสิ่งที่เรารู้เกี่ยวกับตัวช่วยและ Spacebar การแสดงข้อคิดเห็นก็ทำได้ไม่ยากนัก โดยเราจะสร้างโฟลเดอร์ใหม่ชื่อ `comments` ข้างใน `templates` เพื่อไว้เก็บไฟล์เทมเพลทของข้อคิดเห็น และสร้างไฟล์เทมเพลท `commentItem` ข้างในดังนี้
 
 ~~~html
-<template name="comment">
+<template name="commentItem">
   <li>
     <h4>
       <span class="author">{{author}}</span>
@@ -152,20 +155,20 @@ Template.postPage.helpers({
   </li>
 </template>
 ~~~
-<%= caption "client/views/comments/comment.html" %>
+<%= caption "client/templates/comments/comment_item.html" %>
 
-////
+จากนั้นก็สร้างตัวช่วยเทมเพลทที่ใช้เปลี่ยนรูปแบบของวันที่ `submitted` ให้ดูง่ายขึ้น
 
 ~~~js
-Template.comment.helpers({
+Template.commentItem.helpers({
   submittedText: function() {
-    return new Date(this.submitted).toString();
+    return this.submitted.toString();
   }
 });
 ~~~
-<%= caption "client/views/comments/comment.js" %>
+<%= caption "client/templates/comments/comment_item.js" %>
 
-////
+โดยเราจะแสดงจำนวนข้อคิดเห็นของแต่ละข่าวดังนี้
 
 ~~~html
 <template name="postItem">
@@ -178,19 +181,19 @@ Template.comment.helpers({
         {{#if ownPost}}<a href="{{pathFor 'postEdit'}}">Edit</a>{{/if}}
       </p>
     </div>
-    <a href="{{pathFor 'postPage'}}" class="discuss btn">Discuss</a>
+    <a href="{{pathFor 'postPage'}}" class="discuss btn btn-default">Discuss</a>
   </div>
 </template>
 ~~~
-<%= caption "client/views/posts/post_item.html" %>
+<%= caption "client/templates/posts/post_item.html" %>
 <%= highlight "6,7" %>
 
-////
+ด้วยตัวช่วย `commentsCount` ใน `post_item.js` แบบนี้
 
 ~~~js
 Template.postItem.helpers({
   ownPost: function() {
-    return this.userId == Meteor.userId();
+    return this.userId === Meteor.userId();
   },
   domain: function() {
     var a = document.createElement('a');
@@ -202,67 +205,77 @@ Template.postItem.helpers({
   }
 });
 ~~~
-<%= caption "client/views/posts/post_item.js" %>
+<%= caption "client/templates/posts/post_item.js" %>
 <%= highlight "9,10,11" %>
 
 <%= commit "10-2", "Display comments on `postPage`." %>
 
-////
+ตอนนี้คุณก็สามารถแสดงข้อคิดเห็นจากข้อมูลที่เราใส่ไว้ได้ และเห็นหน้าจอคล้ายๆแบบนี้
 
 <%= screenshot "10-1", "Displaying comments" %>
 
-### Submitting Comments
+### ป้อนข้อคิดเห็น
 
-////
+ตอนนี้เราจะหาทางให้ผู้ใช้สร้างข้อคิดเห็นใหม่ได้ โดยวิธีที่เราทำจะคล้ายๆกับที่เราใช้สร้างข่าวใหม่นั่นเอง
 
-////
+โดยเราจะเริ่มด้วยการเพิ่มกล่องข้อคิดเห็นที่ท้ายข่าว ดังนี้
 
 ~~~html
 <template name="postPage">
-  {{> postItem}}
+  <div class="post-page page">
+    {{> postItem}}
 
-  <ul class="comments">
-    {{#each comments}}
-      {{> comment}}
-    {{/each}}
-  </ul>
+    <ul class="comments">
+      {{#each comments}}
+        {{> commentItem}}
+      {{/each}}
+    </ul>
 
-  {{#if currentUser}}
-    {{> commentSubmit}}
-  {{else}}
-    <p>Please log in to leave a comment.</p>
-  {{/if}}
+    {{#if currentUser}}
+      {{> commentSubmit}}
+    {{else}}
+      <p>Please log in to leave a comment.</p>
+    {{/if}}
+  </div>
 </template>
 ~~~
-<%= caption "client/views/posts/post_page.html" %>
-<%= highlight "11~15" %>
+<%= caption "client/templates/posts/post_page.html" %>
+<%= highlight "10~14" %>
 
-////
+และสร้างเทมเพลทของฟอร์มกล่องข้อคิดเห็นแบบนี้
 
 ~~~html
 <template name="commentSubmit">
-  <form name="comment" class="comment-form">
-    <div class="control-group">
+  <form name="comment" class="comment-form form">
+    <div class="form-group {{errorClass 'body'}}">
         <div class="controls">
             <label for="body">Comment on this post</label>
-            <textarea name="body"></textarea>
+            <textarea name="body" id="body" class="form-control" rows="3"></textarea>
+            <span class="help-block">{{errorMessage 'body'}}</span>
         </div>
     </div>
-    <div class="control-group">
-        <div class="controls">
-            <button type="submit" class="btn">Add Comment</button>
-        </div>
-    </div>
+    <button type="submit" class="btn btn-primary">Add Comment</button>
   </form>
 </template>
 ~~~
-<%= caption "client/views/comments/comment_submit.html" %>
+<%= caption "client/templates/comments/comment_submit.html" %>
 
-<%= screenshot "10-2", "The comment submit form" %>
-
-////
+ส่วนการสร้างข้อคิดเห็น เราจะเรียกใช้เมธอด `comment` จากใน `comment_submit.js` ที่ทำงานคล้ายๆกับที่เราทำตอนสร้างข่าว
 
 ~~~js
+Template.commentSubmit.onCreated(function() {
+  Session.set('commentSubmitErrors', {});
+});
+
+Template.commentSubmit.helpers({
+  errorMessage: function(field) {
+    return Session.get('commentSubmitErrors')[field];
+  },
+  errorClass: function (field) {
+    return !!Session.get('commentSubmitErrors')[field] ? 'has-error' : '';
+  }
+});
+
 Template.commentSubmit.events({
   'submit form': function(e, template) {
     e.preventDefault();
@@ -273,7 +286,13 @@ Template.commentSubmit.events({
       postId: template.data._id
     };
 
-    Meteor.call('comment', comment, function(error, commentId) {
+    var errors = {};
+    if (! comment.body) {
+      errors.body = "Please write some content";
+      return Session.set('commentSubmitErrors', errors);
+    }
+
+    Meteor.call('commentInsert', comment, function(error, commentId) {
       if (error){
         throwError(error.reason);
       } else {
@@ -283,79 +302,92 @@ Template.commentSubmit.events({
   }
 });
 ~~~
-<%= caption "client/views/comments/comment_submit.js" %>
+<%= caption "client/templates/comments/comment_submit.js" %>
 
-////
+ก็เหมือนกับที่เราทำตอนสร้างเมธอด `post` ที่รันบนฝั่งเซิร์ฟเวอร์ เราจะให้เมธอด `comment` ของ Meteor เป็นตัวสร้างข้อคิดเห็น โดยทำการตรวจสอบว่าทุกอย่างถูกต้อง แล้วจึงเพิ่มข้อคิดเห็นอันใหม่เข้าไปในคอลเลกชั่น
 
 ~~~js
-Comments = new Meteor.Collection('comments');
+Comments = new Mongo.Collection('comments');
 
 Meteor.methods({
-  comment: function(commentAttributes) {
+  commentInsert: function(commentAttributes) {
+    check(this.userId, String);
+    check(commentAttributes, {
+      postId: String,
+      body: String
+    });
+
     var user = Meteor.user();
     var post = Posts.findOne(commentAttributes.postId);
-    // ensure the user is logged in
-    if (!user)
-      throw new Meteor.Error(401, "You need to login to make comments");
-
-    if (!commentAttributes.body)
-      throw new Meteor.Error(422, 'Please write some content');
 
     if (!post)
-      throw new Meteor.Error(422, 'You must comment on a post');
+      throw new Meteor.Error('invalid-comment', 'You must comment on a post');
 
-    comment = _.extend(_.pick(commentAttributes, 'postId', 'body'), {
+    comment = _.extend(commentAttributes, {
       userId: user._id,
       author: user.username,
-      submitted: new Date().getTime()
+      submitted: new Date()
     });
 
     return Comments.insert(comment);
   }
 });
 ~~~
-<%= caption "collections/comments.js" %>
+<%= caption "lib/collections/comments.js" %>
 <%= highlight "3~25" %>
 
 <%= commit "10-3", "Created a form to submit comments." %>
 
-////
+ซึ่งเราก็ไม่ได้ทำอะไรที่มากเกินไป เราแค่ตรวจสอบว่าผู้ใช้ล็อกอินแล้ว และตรวจดูว่ามีข้อคิดเห็นมาพร้อมกับข่าวหรือไม่ เท่านั้นเอง
 
-### Controlling the Comments Subscription
+<%= screenshot "10-2", "The comment submit form" %>
 
-////
+### ควบคุมการบอกรับข้อคิดเห็น
 
-////
+สิ่งที่เกิดขึ้นตอนนี้ก็คือ เรากำลังเผยแพร่ข้อคิดเห็นทั้งหมดของข่าวทุกๆข่าวส่งไปยังไคลเอนต์ทุกตัวที่เชื่อมต่ออยู่ ซึ่งดูแล้วมากเกินความจำเป็น อันที่จริงแล้วในขณะใดขณะหนึ่งเราใช้แค่ข้อมูลชุดย่อยๆเท่านั้น ดังนั้นเราจะมาปรับปรุงวิธีการเผยแพร่และบอกรับข้อมูลโดยกำหนดให้ชัดเจนไปเลยว่า จะเผยแพร่ข้อคิดเห็นตัวไหนส่งออกไปบ้าง
 
-////
+ถ้าลองคิดดู ช่วงเวลาที่เราจำเป็นต้องบอกรับข้อมูลจากการเผยแพร่ของ `comments` จะเกิดขึ้นแค่ช่วงท่ี่ผู้ใช้งานเปิดเข้าไปดูในหน้าข่าว และเราก็แค่ต้องการโหลดข้อคิดเห็นของข่าวมาเท่านั้น
 
-////
+ขั้นตอนแรก เราจะทำการเปลี่ยนแปลงวิธีบอกรับข้อมูล ซึ่งที่ผ่านมาเราเขียนโค้ดไว้ที่ระดับ *ตัวจัดการเส้นทาง*  หมายความว่า เราโหลดข้อมูลทั้งหมดแค่ครั้งเดียวในตอนที่ตัวจัดการเส้นทางเริ่มทำงาน
 
-////
+แต่ตอนนี้เราต้องการให้การบอกรับข้อมูลขึ้นอยู่กับค่าพารามิเตอร์ของเส้นทาง ซึ่งมีค่าเปลี่ยนแปลงได้ตลอดเวลา ดังนั้นเราจำเป็นต้องย้ายโค้ดบอกรับข้อมูลจากระดับของ *ตัวจัดการเส้นทาง* มาไว้ที่ระดับ *เส้นทาง* แทน
 
-////
+ผลกระทบที่เกิดตามมาคือ แทนที่เราจะโหลดข้อมูลตั้งแต่ตอนแอพเริ่มทำงาน เราก็จะโหลดมันเมื่อเราเปิดเข้าไปที่ *เส้นทาง* นั้นแทน หมายความว่า ในตอนนี้คุณจะต้องรอให้มีการโหลดข้อมูลทุกครั้งที่เข้าดูข้อมูลจากแอพ ซึ่งเป็นข้อเสียที่หลีกเลี่ยงไม่ได้ยกเว้นว่าคุณจะโหลดข้อมูลทั้งหมดเข้ามาตั้งแต่ตอนแรก
+
+เราจะเริ่มจาก ยกเลิกการโหลดข้อคิดเห็นในบล็อก `configure` ด้วยการลบคำสั่ง `Meteor.subscribe('comments')` (พูดง่ายๆคือ เปลี่ยนกลับไปให้เป็นแบบเดิม)
 
 ~~~js
-Router.map(function() {
-
-  //...
-
-  this.route('postPage', {
-    path: '/posts/:_id',
-    waitOn: function() {
-      return Meteor.subscribe('comments', this.params._id);
-    },
-    data: function() { return Posts.findOne(this.params._id); }
-  });
-
-  //...
-
+Router.configure({
+  layoutTemplate: 'layout',
+  loadingTemplate: 'loading',
+  notFoundTemplate: 'notFound',
+  waitOn: function() {
+    return Meteor.subscribe('posts');
+  }
 });
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "7~9" %>
+<%= highlight "5" %>
 
-////
+และเพิ่มฟังก์ชัน `waitOn` ตัวใหม่ที่ระดับ *เส้นทาง* ของ `postPage`
+
+~~~js
+//...
+
+Router.route('/posts/:_id', {
+  name: 'postPage',
+  waitOn: function() {
+    return Meteor.subscribe('comments', this.params._id);
+  },
+  data: function() { return Posts.findOne(this.params._id); }
+});
+
+//...
+~~~
+<%= caption "lib/router.js" %>
+<%= highlight "5~7" %>
+
+จะเห็นว่าเราส่งค่า `this.params._id` เป็นพารามิเตอร์อีกตัวให้กับฟังก์ชันบอกรับข้อมูล ดังนั้นเราจะนำมันมาใช้กำหนดเงื่อนไขในการดึงข้อคิดเห็นให้มาจากข่าวปัจจุบันเท่านั้น
 
 ~~~js
 Meteor.publish('posts', function() {
@@ -363,6 +395,7 @@ Meteor.publish('posts', function() {
 });
 
 Meteor.publish('comments', function(postId) {
+  check(postId, String);
   return Comments.find({postId: postId});
 });
 ~~~
@@ -371,66 +404,126 @@ Meteor.publish('comments', function(postId) {
 
 <%= commit "10-4", "Made a simple publication/subscription for comments." %>
 
-////
+ตอนนี้เหลือแค่ปัญหาเดียว เมื่อเรากลับไปที่หน้าโฮม จะเห็นว่าข่าวทุกตัวมีจำนวนข้อคิดเห็นเป็นศูนย์
 
 <%= screenshot "10-3", "Our comments are gone!" %>
 
-### Counting Comments
+### นับจำนวนข้อคิดเห็น
 
-////
+เดี๋ยวคุณก็รู้ว่าทำไมเราต้องทำ เนื่องจากเราโหลดข้อคิดเห็นเฉพาะที่เส้นทาง `postPage` เท่านั้น เมื่อเราเรียกใช้คำสั่ง `Comments.find({postId: this._id})` ในตัวช่วย `commentsCount` Meteor จึงไม่สามารถหาผลลัพธ์จากข้อมูลที่ฝั่งไคลเอนต์ให้เราได้
 
-////
+วิธีที่ดีที่สุดที่จะจัดการกับเรื่องนี้คือ ทำการ `denormalize` จำนวนข้อคิดเห็นไปไว้ที่ข่าว (ถ้าคุณไม่ค่อยแน่ใจว่ามันหมายถึงอะไร ไม่ต้องกังวลไป เราเตรียมเรื่องนี้ไว้ในบทแทรกตอนต่อไปแล้ว !) ซึ่งแม้ว่ามันจะทำให้โค้ดดูซับซ้อนขึ้นนิด แต่ประสิทธิภาพที่เราได้จากการที่ไม่ต้องเผยแพร่ข้อคิดเห็น _ทั้งหมด_ มาที่หน้าแสดงข่าวนั้น คุ้มค่ามากทีเดียว
 
-////
+โดยที่เราจะทำ คือ เพิ่มคุณสมบัติ `commentsCount` ให้กับโครงสร้างข้อมูล `post` เริ่มจากการปรับเปลี่ยนโค้ดสร้างข้อมูล (และเรียก `meteor reset` เพื่อโหลดมันเข้ามาใหม่ แล้วอย่าลืมสร้างบัญชีผู้ใช้ของคุณอีกครั้งด้วย)
 
 ~~~js
-var telescopeId = Posts.insert({
-  title: 'Introducing Telescope',
-  ..
-  commentsCount: 2
-});
+// Fixture data
+if (Posts.find().count() === 0) {
+  var now = new Date().getTime();
 
-Posts.insert({
-  title: 'Meteor',
-  ...
-  commentsCount: 0
-});
+  // create two users
+  var tomId = Meteor.users.insert({
+    profile: { name: 'Tom Coleman' }
+  });
+  var tom = Meteor.users.findOne(tomId);
+  var sachaId = Meteor.users.insert({
+    profile: { name: 'Sacha Greif' }
+  });
+  var sacha = Meteor.users.findOne(sachaId);
 
-Posts.insert({
-  title: 'The Meteor Book',
-  ...
-  commentsCount: 0
-});
+  var telescopeId = Posts.insert({
+    title: 'Introducing Telescope',
+    userId: sacha._id,
+    author: sacha.profile.name,
+    url: 'http://sachagreif.com/introducing-telescope/',
+    submitted: new Date(now - 7 * 3600 * 1000),
+    commentsCount: 2
+  });
+
+  Comments.insert({
+    postId: telescopeId,
+    userId: tom._id,
+    author: tom.profile.name,
+    submitted: new Date(now - 5 * 3600 * 1000),
+    body: 'Interesting project Sacha, can I get involved?'
+  });
+
+  Comments.insert({
+    postId: telescopeId,
+    userId: sacha._id,
+    author: sacha.profile.name,
+    submitted: new Date(now - 3 * 3600 * 1000),
+    body: 'You sure can Tom!'
+  });
+
+  Posts.insert({
+    title: 'Meteor',
+    userId: tom._id,
+    author: tom.profile.name,
+    url: 'http://meteor.com',
+    submitted: new Date(now - 10 * 3600 * 1000),
+    commentsCount: 0
+  });
+
+  Posts.insert({
+    title: 'The Meteor Book',
+    userId: tom._id,
+    author: tom.profile.name,
+    url: 'http://themeteorbook.com',
+    submitted: new Date(now - 12 * 3600 * 1000),
+    commentsCount: 0
+  });
+}
 ~~~
 <%= caption "server/fixtures.js" %>
+<%= highlight "20,21,45,46,54,55" %>
 
-////
+ก็เหมือนอย่างเคย เมื่อคุณเปลี่ยนแปลงโค้ดสร้างข้อมูล คุณก็ต้องเรียก `meteor reset` กับฐานข้อมูลคุณ เพื่อให้แน่ใจว่ามันถูกรันอีกครั้ง
+
+จากนั้นเราก็ทำให้แน่ใจว่า ข่าวใหม่ทุกตัวจะมีจำนวนข้อคิดเห็นเป็นศูนย์
 
 ~~~js
-// pick out the whitelisted keys
-var post = _.extend(_.pick(postAttributes, 'url', 'title', 'message'), {
+//...
+
+var post = _.extend(postAttributes, {
   userId: user._id,
   author: user.username,
-  submitted: new Date().getTime(),
+  submitted: new Date(),
   commentsCount: 0
 });
 
 var postId = Posts.insert(post);
-~~~
-<%= caption "collections/posts.js" %>
 
-////
+//...
+~~~
+<%= caption "lib/collections/posts.js" %>
+<%= highlight "6,7" %>
+
+และเราก็อัพเดทค่า `commentsCount` อีกครั้งเมื่อเราสร้างข้อคิดเห็นใหม่ ด้วยการใช้ตัวดำเนินการ `$inc` ของ Mongo (ที่ใช้เพิ่มค่าฟิลด์ตัวเลขทีละหนึ่ง)
 
 ~~~js
+//...
+
+comment = _.extend(commentAttributes, {
+  userId: user._id,
+  author: user.username,
+  submitted: new Date()
+});
+
 // update the post with the number of comments
 Posts.update(comment.postId, {$inc: {commentsCount: 1}});
 
 return Comments.insert(comment);
-~~~
-<%= caption "collections/comments.js "%>
 
-////
+//...
+~~~
+<%= caption "lib/collections/comments.js "%>
+<%= highlight "9,10" %>
+
+สุดท้าย เราก็แค่ลบตัวช่วย `commentsCount` ออกจาก `client/templates/posts/post_item.js` เนื่องจากเรามีฟิลด์นี้แล้วที่ตัวข่าว
 
 <%= commit "10-5", "Denormalized the number of comments into the post." %>
 
-////
+ตอนนี้ผู้ใช้ก็สามารถพูดคุยกันได้ แต่มันจะน่าเสียดายแค่ไหนถ้าพวกเค้าพลาดข้อคิดเห็นใหม่ๆ และไม่ว่าคุณจะรู้อะไรมา ในบทต่อไปเราจะแสดงให้คุณเห็นวิธีใช้ การแจ้งเตือน เพื่อป้องกันเรื่องนี้ !
+
+
