@@ -1,29 +1,38 @@
 ---
-title: การแจ้งเตือน (Notifications)
+title: การแจ้งเตือน
 slug: notifications
 date: 0011/01/01
 number: 11
-contents: Add a notifications collection to notify users of other user's actions.|Learn how to only share the relevant notifications with a given user.|Learn more about Meteor publications and subscriptions.
+contents: เพิ่มคอลเลกชั่นการแจ้งเตือนเพื่อแจ้งผู้ใช้ให้รับรู้ว่า มีใครทำอะไรบ้าง|รู้วิธีแชร์ข้อมูลแจ้งเตือนให้กับผู้ใช้ที่เกี่ยวข้อง|รู้วิธีการเผยแพร่และบอกรับข้อมูลของ Meteor ให้มากขึ้น
 paragraphs: 25
 ---
 
-////
+ตอนนี้ผู้ใช้ก็สามารถแสดงข้อคิดเห็นลงในข่าวของคนอื่นได้แล้ว ดังนั้นมันน่าจะดีไม่น้อย ถ้าจะทำให้พวกเค้ารู้ว่าการสนทนาได้เริ่มต้นขึ้นแล้ว
 
-////
+เพื่อให้เป็นอย่างนั้นได้ เราก็จะเตือนเจ้าของข่าวว่า มีข้อคิดเห็นใหม่เกิดขึ้นในข่าวแล้ว และเตรียมลิงก์ให้กดเข้าไปดูข้อคิดเห็นนั้นได้
 
-////
+คุณสมบัติแบบนี้เป็นจุดเด่นของ Meteor เพราะว่าตัว Meteor เองนั้นเป็นเรียลไทม์อยู่แล้ว ทำให้เราสามารถแสดงการแจ้งเตือนได้ _ทันที_ ไม่จำเป็นต้องคอยให้ผู้ใช้รีเฟรชหน้าจอ หรือเช็คอินอะไรอีก ที่เราต้องทำก็แค่ แสดงกล่องข้อความเตือนโดยไม่ต้องใช้โค้ดพิเศษอะไรเพิ่มเติม
 
-### Creating notifications
+### สร้างการแจ้งเตือน
 
-////
+เราจะสร้างการแจ้งเตือนเมื่อมีบางคนป้อนข้อคิดเห็นลงในข่าวของคุณ ซึ่งการแจ้งเตือนนี้สามารถขยายขอบเขตการใช้งานได้อีกหลากหลาย แต่สำหรับตอนนี้เราแค่เตือนให้ผู้ใช้รู้ว่าเกิดอะไรขึ้นก็พอ
 
-////
+เราจะสร้างคอลเลกชั่น `Notifications` พร้อมกับฟังก์ชั่น `createCommentNotification` ที่ใช้เพิ่มข้อมูลการแจ้งเตือน เมื่อมีข้อคิดเห็นใหม่ๆ เกิดขึ้นตรงกับข่าวใดข่าวหนึ่งของคุณ
+
+เนื่องจากเราจะทำการอัพเดทการแจ้งเตือนจากฝั่งไคลเอนต์ เราก็ต้องแน่ใจว่าได้กำหนดสิทธิ์ `allow` ที่เข้มงวดพอ โดยเราจะตรวจสอบในเรื่องต่อไปนี้
+
+- ผู้ใช้ที่สั่ง `update` เป็นเจ้าของการแจ้งเตือนที่กำลังถูกแก้ไข
+- ผู้ใช้กำลังพยายามอัพเดทแค่หนึ่งฟิลด์
+- หนึ่งฟิลด์นั้นก็คือ คุณสมบัติ `read` ของการแจ้งเตือน
 
 ~~~js
-Notifications = new Meteor.Collection('notifications');
+Notifications = new Mongo.Collection('notifications');
 
 Notifications.allow({
-  update: ownsDocument
+  update: function(userId, doc, fieldNames) {
+    return ownsDocument(userId, doc) && 
+      fieldNames.length === 1 && fieldNames[0] === 'read';
+  }
 });
 
 createCommentNotification = function(comment) {
@@ -39,97 +48,118 @@ createCommentNotification = function(comment) {
   }
 };
 ~~~
-<%= caption "collections/notifications.js" %>
+<%= caption "lib/collections/notifications.js" %>
 
-////
+ก็เหมือนกับเรื่องข่าวและข้อคิดเห็น คอลเลกชั่น `Notifications` จะถูกแชร์ให้ใช้งานได้ทั้งที่ฝั่งไคลเอนต์และเซิร์ฟเวอร์ และเราก็จำเป็นต้องอัพเดทข้อมูลการแจ้งเตือนหลังจากที่ผู้ใช้เห็นข้อความแล้ว โดยเราเปิดให้มีการอัพเดทแบบจำกัดสิทธิ์การใช้งานกับข้อมูลที่เป็นของผู้ใช้เท่านั้น
 
-////
+เรายังสร้างฟังก์ชันง่ายๆใช้ตรวจดูข่าวที่ผู้ใช้กำลังป้อนข้อคิดเห็น ค้นหาว่าจะต้องแจ้งเตือนใคร และสร้างการแจ้งเตือนขึ้นใหม่
 
-////
+เนื่องจากเราสร้างข้อคิดเห็นด้วยเมธอดที่รันบนเซิร์ฟเวอร์ ดังนั้นเราก็สามารถปรับให้เมธอดนั้นมาเรียกใช้ฟังก์ชันของเราได้ โดยเปลี่ยน `return Comments.insert(comment);` ไปเป็น `comment._id = Comments.insert(comment)` เพื่อเก็บค่า `_id` ของข้อคิดเห็นใหม่ไว้ในตัวแปร แล้วก็เรียกฟังก์ชัน  `createCommentNotification` ของเราดังนี้
 
 ~~~js
-Comments = new Meteor.Collection('comments');
+Comments = new Mongo.Collection('comments');
 
 Meteor.methods({
-  comment: function(commentAttributes) {
+  commentInsert: function(commentAttributes) {
 
-    // [...]
+    //...
+    
+    comment = _.extend(commentAttributes, {
+      userId: user._id,
+      author: user.username,
+      submitted: new Date()
+    });
+    
+    // update the post with the number of comments
+    Posts.update(comment.postId, {$inc: {commentsCount: 1}});
 
     // create the comment, save the id
     comment._id = Comments.insert(comment);
-
+    
     // now create a notification, informing the user that there's been a comment
     createCommentNotification(comment);
-
+    
     return comment._id;
   }
 });
 ~~~
-<%= caption "collections/comments.js" %>
-<%= highlight "8~14" %>
+<%= caption "lib/collections/comments.js" %>
+<%= highlight "17~123" %>
 
-////
+และทำการเผยแพร่ข้อมูลการแจ้งเตือน ดังนี้
 
 ~~~js
-// [...]
+Meteor.publish('posts', function() {
+  return Posts.find();
+});
+
+Meteor.publish('comments', function(postId) {
+  check(postId, String);
+  return Comments.find({postId: postId});
+});
 
 Meteor.publish('notifications', function() {
   return Notifications.find();
 });
 ~~~
 <%= caption "server/publications.js" %>
+<%= highlight "10~12" %>
+
+โดยบอกรับข้อมูลที่ไคลเอนต์แบบนี้
 
 ~~~js
 Router.configure({
   layoutTemplate: 'layout',
   loadingTemplate: 'loading',
+  notFoundTemplate: 'notFound',
   waitOn: function() {
     return [Meteor.subscribe('posts'), Meteor.subscribe('notifications')]
   }
 });
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "5" %>
+<%= highlight "6" %>
 
 <%= commit "11-1", "Added basic notifications collection." %>
 
-### Displaying Notifications
+### แสดงการแจ้งเตือน
 
-////
+ตอนนี้เราก็พร้อมที่จะเพิ่มรายการแจ้งเตือนเข้าไปที่ header แล้ว
 
 ~~~html
 <template name="header">
-  <header class="navbar">
-    <div class="navbar-inner">
-      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+  <nav class="navbar navbar-default" role="navigation">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navigation">
+        <span class="sr-only">Toggle navigation</span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
-      </a>
-      <a class="brand" href="{{pathFor 'postsList'}}">Microscope</a>
-      <div class="nav-collapse collapse">
-        <ul class="nav">
-          {{#if currentUser}}
-            <li>
-              <a href="{{pathFor 'postSubmit'}}">Submit Post</a>
-            </li>
-            <li class="dropdown">
-              {{> notifications}}
-            </li>
-          {{/if}}
-        </ul>
-        <ul class="nav pull-right">
-          <li>{{loginButtons}}</li>
-        </ul>
-      </div>
+      </button>
+      <a class="navbar-brand" href="{{pathFor 'postsList'}}">Microscope</a>
     </div>
-  </header>
+    <div class="collapse navbar-collapse" id="navigation">
+      <ul class="nav navbar-nav">
+        {{#if currentUser}}
+          <li>
+            <a href="{{pathFor 'postSubmit'}}">Submit Post</a>
+          </li>
+          <li class="dropdown">
+            {{> notifications}}
+          </li>
+        {{/if}}
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        {{> loginButtons}}
+      </ul>
+    </div>
+  </nav>
 </template>
 ~~~
-<%= caption "client/views/includes/header.html" %>
-<%= highlight "12~19" %>
+<%= caption "client/templates/includes/header.html" %>
+<%= highlight "15~22" %>
 
-////
+และสร้างเทมเพลท `notifications` และ `notificationItem` (โดยใช้ `notifications.html` เพียงไฟล์เดียว)
 
 ~~~html
 <template name="notifications">
@@ -143,7 +173,7 @@ Router.configure({
   <ul class="notification dropdown-menu">
     {{#if notificationCount}}
       {{#each notifications}}
-        {{> notification}}
+        {{> notificationItem}}
       {{/each}}
     {{else}}
       <li><span>No Notifications</span></li>
@@ -151,7 +181,7 @@ Router.configure({
   </ul>
 </template>
 
-<template name="notification">
+<template name="notificationItem">
   <li>
     <a href="{{notificationPostPath}}">
       <strong>{{commenterName}}</strong> commented on your post
@@ -159,11 +189,11 @@ Router.configure({
   </li>
 </template>
 ~~~
-<%= caption "client/views/notifications/notifications.html" %>
+<%= caption "client/templates/notifications/notifications.html" %>
 
-////
+โดยแผนที่วางไว้ก็คือ ในแต่ละการแจ้งเตือนจะมีลิงก์ไปยังหน้าข่าวที่ถูกป้อนข้อคิดเห็น และมีชื่อผู้ที่ป้อนแสดงอยู่ด้วย
 
-////
+ขั้นต่อไป เราก็ต้องทำให้แน่ใจว่า ตัวช่วยดึงข้อมูลการแจ้งเตือนที่ถูกต้องออกมา และทำการอัพเดทสถานะการแจ้งเตือนเป็น `read` เมื่อผู้ใช้คลิ๊กที่ลิงก์
 
 ~~~js
 Template.notifications.helpers({
@@ -171,37 +201,37 @@ Template.notifications.helpers({
     return Notifications.find({userId: Meteor.userId(), read: false});
   },
   notificationCount: function(){
-    return Notifications.find({userId: Meteor.userId(), read: false}).count();
+  	return Notifications.find({userId: Meteor.userId(), read: false}).count();
   }
 });
 
-Template.notification.helpers({
+Template.notificationItem.helpers({
   notificationPostPath: function() {
     return Router.routes.postPage.path({_id: this.postId});
   }
-})
+});
 
-Template.notification.events({
+Template.notificationItem.events({
   'click a': function() {
     Notifications.update(this._id, {$set: {read: true}});
   }
-})
+});
 ~~~
-<%= caption "client/views/notifications/notifications.js" %>
+<%= caption "client/templates/notifications/notifications.js" %>
 
 <%= commit "11-2", "Display notifications in the header." %>
 
-////
+คุณอาจจะคิดว่า การแจ้งเตือนไม่ได้แตกต่างอะไรกับข้อผิดพลาด ซึ่งมันก็จริงที่ว่า โครงสร้างของพวกมันคล้ายคลึงกันมาก แต่มีสิ่งหนึ่งที่แตกต่างออกไปคือ เราได้สร้างคอลเลกชั่นที่ซิงโครไนซ์ข้อมูลระหว่างไคลเอนต์-เซิร์ฟเวอร์อย่างสมบูรณ์ขึ้นมา นั่นหมายความว่า ตราบใดที่เรายังใช้บัญชีผู้ใช้เดิม การแจ้งเตือนจะยังคงอยู่ต่อไป ไม่ว่าจะรีเฟรชสักกี่ครั้ง และบนอุปกรณ์ไหนก็ตาม
 
-////
+ลองทดสอบกันดูหน่อย ให้เปิดเบราว์เซอร์ตัวที่สอง (สมมุติว่า fiirefox) สร้างบัญชีผู้ใช้ใหม่ และป้อนข้อคิดเห็นลงในข่าวที่สร้างไว้ด้วยชื่อผู้ใช้คนแรก (ที่คุณป้อนไว้ใน Chrome) คุณก็ควรจะเห็นหน้าจอแบบนี้
 
 <%= screenshot "11-1", "Displaying notifications." %>
 
-### Controlling access to notifications
+### ควบคุมการเข้าใช้การแจ้งเตือน
 
-////
+การแจ้งเตือนทำงานได้ดี แต่ทว่ามีปัญหาเล็กน้อย คือ การแจ้งเตือนของเราเป็นแบบสาธาณะ (public)
 
-////
+ถ้าคุณยังเปิดเบราว์เซอร์ตัวที่สองทิ้งไว้ ให้ลองรันคำสั่งต่อไปนี้ในคอนโซลของเบราว์เซอร์ดู
 
 ~~~js
 ❯ Notifications.find().count();
@@ -209,26 +239,26 @@ Template.notification.events({
 ~~~
 <%= caption "Browser console" %>
 
-////
+ผู้ใช้รายใหม่นี้ (คนที่เพิ่ง *ป้อนข้อคิดเห็น*)  ไม่ควรจะเห็นการแจ้งเตีอนตัวไหนเลย การแจ้งเตือนที่เค้ามองเห็นจากคอลเล็กชั่น `Notifications` จริงๆแล้วเป็นของผู้ใช้ *คนแรก*
 
-////
+นอกเหนือจากปัญหาเรื่องความเป็นส่วนตัวแล้ว เราคงไม่สามารถทำให้การแจ้งเตือนของผู้ใช้ทุกคนถูกโหลดไปที่เบราว์เซอร์ทุกตัวของผู้ใช้ทั้งหมดได้ ในเว็บไซต์ขนาดใหญ่นั้น อาจทำให้หน่วยความจำของเบราว์เซอร์ไม่เพียงพอ และทำให้เกิดปัญหาใหญ่ที่ส่งผลเสียต่อประสิทธิภาพของระบบได้
 
-////
+เราแก้ปัญหานี้ได้ด้วยการ *เผยแพร่ข้อมูล*  โดยเราสามารถเผยแพร่เฉพาะส่วนของคอลเลกชั่นที่ต้องการแชร์ระหว่างเบราว์เซอร์ได้
 
-////
+เพื่อให้สำเร็จตามนั้น เราจำเป็นต้องใช้ค่าเคอร์เซอร์ที่แตกต่างไปจาก `Notifications.find()` ตัวเดิม สิ่งที่เราต้องการคือ ให้คืนเคอร์เซอร์ที่ตรงกับการแจ้งเตือนของผู้ใช้ปัจจุบัันเท่านั้น
 
-////
+ซึ่งสามารถทำได้ง่ายๆ เพราะฟังก์ชัน `publish` นั้นมีค่า `_id` ของผู้ใช้ปัจจุบันเก็บอยู่ที่ `this.userId` แล้ว
 
 ~~~js
 Meteor.publish('notifications', function() {
-  return Notifications.find({userId: this.userId});
+  return Notifications.find({userId: this.userId, read: false});
 });
 ~~~
 <%= caption "server/publications.js" %>
 
 <%= commit "11-3", "Only sync notifications that are relevant to the user." %>
 
-////
+ตอนนี้ถ้าเราตรวจดูจากเบราว์เซอร์ทั้งคู่ เราก็น่าจะเห็นการแจ้งเตือนที่แตกต่างกัน
 
 ~~~js
 ❯ Notifications.find().count();
@@ -242,6 +272,6 @@ Meteor.publish('notifications', function() {
 ~~~
 <%= caption "Browser console (user 2)" %>
 
-////
+ในความเป็นจริง รายการแจ้งเตือนจะเปลี่ยนไปเมื่อคุณล็อกอินเข้าและออกจากแอพ นั่นก็เพราะการเผยแพร่ข้อมูลจะทำงานใหม่โดยอัตโนมัติ เมื่อใดก็ตามที่บัญชีผู้ใช้เปลี่ยนแปลง
 
-////
+จะเห็นว่าแอพของเราเริ่มจะทำอะไรได้มากขึ้นเรื่อยๆ เมื่อมีจำนวนผู้ใช้มากขึ้น และเริ่มป้อนข่าวเข้ามา เราก็มีความเสี่ยงที่จะเห็นหน้าโฮมแบบไม่รู้จบได้ ดังนั้นเราจะมาแก้ปัญหานี้ในบทต่อไป ด้วยการใช้การแบ่งหน้าเข้ามาช่วย 
