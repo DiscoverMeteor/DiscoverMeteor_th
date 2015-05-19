@@ -1,46 +1,46 @@
 ---
-title: การเปลี่ยนหน้า (Pagination)
+title: การแบ่งหน้า
 slug: pagination
 date: 0012/01/01
 number: 12
-contents: Learn more about Meteor's subscriptions, and how we can use them to control data.|Implement infinite-style pagination.|Use the `iron-router-progress` package to implement a nifty iOS-style progress bar.|Create a special subscription to deal with direct links to posts page.
+contents: เรียนรู้เพิ่มเติมเรื่องการบอกรับข้อมูล และวิธีการที่เราใช้มันควบคุมข้อมูล|สร้างการแบ่งหน้าแบบไม่รู้จบ|ใช้แพ็คเกจ `iron-router-progress` สร้างแถบความคืบหน้าสไตล์ iOS|สร้างการบอกรับข้อมูลแบบพิเศษ เพื่อจัดการกับลิงค์ที่ตรงมายังหน้าข่าว
 paragraphs: 67
 ---
 
-////
+ทุกสิ่งทุกอย่างดูเยี่ยมไปหมดกับ Microscope และเราก็หวังว่าผู้คนทั้งหลายจะชื่นชอบมัน เมื่อถึงเวลาเปิดตัวสู่สายตาชาวโลก
 
-////
+สิ่งที่เราควรคิดถึงในตอนนี้ น่าจะเป็นเรื่องจำนวนข่าวที่จะเข้ามาในไซต์ว่าจะส่งผลต่อประสิทธิภาพอย่างไรตอนที่เริ่มเปิดตัว !
 
-////
+เราได้พูดกันมาก่อนหน้านี้ว่า คอลเลกชั่นฝั่งไคลเอนต์ควรจะประกอบด้วยชุดข้อมูลย่อยของข้อมูลที่อยู่บนเซิร์ฟเวอร์ และเราก็ลงมือทำกันไปแล้วกับคอลเลกชั่นของการแจ้งเตือนและข้อคิดเห็น
 
-////
+แต่ที่เราทำอยู่ตอนนี้ เรายังเผยแพร่ข้อมูลข่าวทั้งหมดส่งออกไปในครั้งเดียว ถึงผู้ใช้ที่เชื่อมต่อทั้งหมด ซึ่งในไม่ช้า ถ้ามีข่าวป้อนเข้ามาเป็นพันๆรายการ มันจะเกิดปัญหาขึ้นแน่ และนั่นทำให้เราจำเป็นต้องแบ่งหน้าข่าวเพื่อแก้ไขปัญหาตรงนี้
 
-### Adding More Posts
+### เพิ่มข่าวเข้าไปอีก
 
-////
+สิ่งแรกที่เราจะทำ คือ ปรับข้อมูลตั้งต้น โดยให้โหลดข่าวเข้ามามากพอที่จะทำให้การแบ่งหน้าดูมีเหตุผล 
 
 ~~~js
-// Fixture data
+// Fixture data 
 if (Posts.find().count() === 0) {
 
   //...
-
+  
   Posts.insert({
     title: 'The Meteor Book',
     userId: tom._id,
     author: tom.profile.name,
     url: 'http://themeteorbook.com',
-    submitted: now - 12 * 3600 * 1000,
+    submitted: new Date(now - 12 * 3600 * 1000),
     commentsCount: 0
   });
-
+  
   for (var i = 0; i < 10; i++) {
     Posts.insert({
       title: 'Test post #' + i,
       author: sacha.profile.name,
       userId: sacha._id,
       url: 'http://google.com/?q=test-' + i,
-      submitted: now - i * 3600 * 1000,
+      submitted: new Date(now - i * 3600 * 1000),
       commentsCount: 0
     });
   }
@@ -49,82 +49,88 @@ if (Posts.find().count() === 0) {
 <%= caption "server/fixtures.js" %>
 <%= highlight "15~24" %>
 
-////
+หลังจากรัน `meteor reset` และสั่งให้แอพเริ่มทำงานอีกคร้้ง คุณก็น่าจะเห็นอะไรแบบนี้
 
 <%= screenshot "12-1", "Displaying dummy data. " %>
 
 <%= commit "12-1", "Added enough posts that pagination is necessary." %>
 
-### Infinite Pagination
+### แบ่งหน้าแบบไม่รู้จบ
 
-////
+เราจะสร้างการแบ่งหน้าแบบ "ไม่รู้จบ" ที่เราพูดแบบนั้นก็เพราะว่า ตอนแรกเราจะแสดงข่าวซัก 10 ข่าว และในหน้าจอก็จะมีลิงก์ "โหลดเพิ่ม" อยู่ด้านล่าง เมื่อคลิ๊กที่ลิงก์ก็จะมีข่าวเพิ่มเข้ามาอีก 10  และเป็นอย่างนี้ไปเรื่อยๆ *แบบไม่รู้จบ*  โดยเราจะควบคุมการแบ่งหน้าทั้งหมดด้วยค่าพารามิเตอร์ตัวเดียว ใช้แทนจำนวนข่าวที่จะแสดงในหน้าจอ
 
-////
+ตอนนี้เราก็ต้องหาวิธีบอกเซิร์ฟเวอร์เกี่ยวกับพารามิเตอร์ตัวนี้ เพื่อที่มันจะได้รู้ว่าจะต้องส่งข่าวมาให้ไคลเอนต์เป็นจำนวนเท่าไหร่ โดยโค้ดของเราตอนนี้ เราบอกรับข้อมูล `posts` จากในตัวจัดการเส้นทาง ดังนั้นเราก็จะใช้ประโยชน์จากตรงนี้ ทำให้ตัวจัดเส้นทางแบ่งหน้าข้อมูลให้เราได้
 
-////
+วิธีที่ง่ายที่สุดคือ ใส่พารามิเตอร์ของจำนวนข่าวที่ต้องการเข้าไปในพาธเส้นทาง ทำให้ URL ของเราเป็นแบบนี้ `http://localhost:3000/25` ข้อดีของการใช้ URL เมื่อเทียบกับเมธอดคือ ถ้าคุณกำลังดูข่าวอยู่ 25 รายการ จากนั้นเผลอไปรีโหลดเบราว์เซอร์ คุณก็ยังคงเห็นข่าวแค่ 25 รายการเมื่อมันโหลดเสร็จ
 
-////
+แนวทางที่ควรทำคือ เราต้องเปลี่ยนวิธีที่เราบอกรับข่าว ให้เป็นเหมือนกับที่เราทำก่อนหน้านี้ในบท *ข้อคิดเห็น* โดยเราต้องย้ายโค้ดการบอกรับจากระดับ *ตัวจัดการเส้นทาง* มาไว้ที่ระดับ *เส้นทาง* แทน
 
-////
+ฟังดูเหมือนมีอะไรมากมายที่ต้องทำในครั้งเดียว แต่เมื่อเห็นโค้ดคุณก็จะเข้าใจได้
 
-////
+ขั้นตอนแรก เราต้องหยุดการบอกรับข้อมูล `posts` ในบล็อก `Router.configure()` โดยแค่ลบ `Meteor.subscribe('posts')` ออกไป ให้เหลือเพียงแค่การบอกรับ `notifications` เท่านั้น
 
 ~~~js
 Router.configure({
   layoutTemplate: 'layout',
   loadingTemplate: 'loading',
-  waitOn: function() {
+  notFoundTemplate: 'notFound',
+  waitOn: function() { 
     return [Meteor.subscribe('notifications')]
   }
 });
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "5" %>
+<%= highlight "6" %>
 
-////
-
-~~~js
-Router.map(function() {
-  //...
-
-  this.route('postsList', {
-    path: '/:postsLimit?'
-  });
-});
-~~~
-<%= caption "lib/router.js" %>
-<%= highlight "5" %>
-
-////
-
-////
-
-////
+จากนั้นเราจะเพิ่มพารามิเตอร์ `postsLimit` ไปที่พาธของเส้นทาง โดยใส่ `?` หลังชื่อพารามิเตอร์เพื่อบอกว่า จะมีหรือไม่มีก็ได้ ดังนั้นเส้นทางของเราไม่เพียงแต่จะตรงกับ `http://localhost:3000/50` แต่ยังตรงกับของเดิมคือ `http://localhost:3000` ได้ด้วย
 
 ~~~js
-Router.map(function() {
-  //..
+//...
 
-  this.route('postsList', {
-    path: '/:postsLimit?',
-    waitOn: function() {
-      var postsLimit = parseInt(this.params.postsLimit) || 5;
-      return Meteor.subscribe('posts', {sort: {submitted: -1}, limit: postsLimit});
-    }
-  });
+Router.route('/:postsLimit?', {
+  name: 'postsList',
 });
+
+//...
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "6~9" %>
+<%= highlight "3" %>
 
-////
+เรื่องสำคัญที่ต้องรู้คือ พาธในรูปแบบ `/:parameter?` นั้น จะตรงกับทุกๆเส้นทางที่เกิดขึ้นได้ทั้งหมด และเนื่องจากแต่ละเส้นทางที่เรากำหนดจะถูกแปลความหมายทีละตัว เพื่อตรวจดูว่ามันตรงกับพาธปัจจุบันหรือไม่ ดังนั้นเราก็ต้องแน่ใจว่า ได้จัดเส้นทางให้เรียงลำดับลดลงตามความเฉพาะเจาะจงแล้ว
+
+ในอีกนัยหนึ่ง เส้นทางไหนที่กำหนดเป้าหมายไว้เฉพาะเจาะจงมาก เช่น `/posts/:_id` ควรมาก่อน และเส้นทาง `postsList` ของเราก็ควรย้าย **ไปไว้ข้างล่างสุด**  ของการกำหนดเส้นทาง เพราะว่ามันตรงกับทุกพาธที่เป็นไปได้
+
+ตอนนี้ก็ได้เวลาที่จะจัดการปัญหายากเรื่องการบอกรับข้อมูลและค้นหาข้อมูลที่ต้องการกันแล้ว โดยเราต้องจัดการกับกรณีที่ไม่มีค่าพารามิเตอร์ `postsLimit` ด้วย ซึ่งเราจะกำหนดค่าตั้งต้นให้มัน โดยใช้ค่าเป็น 5 เพื่อให้มีช่องว่างพอที่จะลองเล่นกับการแบ่งหน้าได้
+
+~~~js
+//...
+
+Router.route('/:postsLimit?', {
+  name: 'postsList',
+  waitOn: function() {
+    var limit = parseInt(this.params.postsLimit) || 5; 
+    return Meteor.subscribe('posts', {sort: {submitted: -1}, limit: limit});
+  }
+});
+
+//...
+~~~
+<%= caption "lib/router.js" %>
+<%= highlight "5~8" %>
+
+คุณน่าจะสังเกตุเห็นว่า เราส่งอ็อบเจกต์จาวาสคริปต์ ({sort: {submitted: -1}, limit: postsLimit}) ไปพร้อมกับชื่อการเผยแพร่ข้อมูล `posts` ของเรา ซึ่งอ็อบเจกต์ตัวนี้ทำหน้าที่เป็นพารามิเตอร์สำหรับระบุค่าตัวเลือกของคำสั่ง `Posts.find()` บนฝั่งเซิร์ฟเวอร์ และตอนนี้เราก็จะข้ามมาที่ฝั่งเซิร์ฟเวอร์เพื่อเขียนโค้ดต่อไปนี้
 
 ~~~js
 Meteor.publish('posts', function(options) {
+  check(options, {
+    sort: Object,
+    limit: Number
+  });
   return Posts.find({}, options);
 });
 
 Meteor.publish('comments', function(postId) {
+  check(postId, String);
   return Comments.find({postId: postId});
 });
 
@@ -133,19 +139,19 @@ Meteor.publish('notifications', function() {
 });
 ~~~
 <%= caption "server/publications.js" %>
-<%= highlight "1~3" %>
+<%= highlight "1~7" %>
 
 <% note do %>
 
 ### Passing Parameters
 
-////
+โค้ดการเผยแพร่ข้อมูลของเรานั้น ทำหน้าที่แจ้งไปยังเซิร์ฟเวอร์ว่า สามารถเชื่อถืออ็อบเจกต์จาวาสคริปต์ที่ส่งมาจากไคลเอนต์ (ในกรณีนี้คือ `{limit: postsLimit}`) และใช้เป็นค่า `options` ของคำสั่ง `find()` ได้ ทำให้มีความเป็นไปได้ที่ผู้ใช้จะส่งตัวเลือกแบบไหนก็ได้ที่ต้องการผ่านทางคอนโซลของเบราว์เซอร์
 
-////
+ในกรณีของเรานั้น มันแทบจะไม่ส่งผลกระทบอะไร เนื่องจากที่ผู้ใช้สามารถทำได้คือ เรียงลำดับข่าวแบบอื่น หรือเปลี่ยนค่า limit (ที่เราต้องการทำตั้งแต่แรก) เท่านั้น แต่อย่างไรก็ตาม แอพที่ใช้งานจริงก็ควรต้องมีการจำกัดค่าของลิมิตไว้ด้วย!
 
-////
+เรื่องที่ดีก็คือ การใช้ `check()` ทำให้เรารู้ว่า ผู้ใช้จะไม่สามารถแอบใส่ตัวเลือกอื่นเข้ามาได้ (เช่น `fields` ที่ในบางกรณีอาจจะเปิดเผยข้อมูลส่วนตัวของเอกสารออกมาได้)
 
-////
+โดยรูปแบบที่ปลอดภัยกว่านั้นคือ ส่งค่าพารามิเตอร์แยกออกมาจากเดิมที่เป็นอ็อบเจกต์ เพื่อให้แน่ใจว่าคุณยังควบคุมข้อมูลไว้ได้
 
 ~~~js
 Meteor.publish('posts', function(sort, limit) {
@@ -155,111 +161,142 @@ Meteor.publish('posts', function(sort, limit) {
 
 <% end %>
 
-////
+ตอนนี้เราก็ได้บอกรับข้อมูลที่ระดับเส้นทางไว้แล้ว และมันก็น่าจะดีถ้าเราจะกำหนดชุดข้อมูลในที่เดียวกันเลย โดยเราจะปรับเปลี่ยนจากรูปแบบก่อนหน้านี้เล็กน้อย โดยทำให้ฟังก์ชัน `data` คืนค่าเป็นอ็อบเจกต์จาวาสคริปต์แทนของเดิมที่เป็นเคอร์เซอร์ ซึ่งจะทำให้เราสามารถสร้างชุดข้อมูล *ให้มีชื่อ* ที่เราเรียกว่า `posts` ได้
 
-////
+ความหมายง่ายๆก็คือ แทนที่เราจะใช้ค่า `this` ที่มีมาให้ภายในเทมเพลท เราก็จะเรียกชุดข้อมูลของเราว่า `posts` แทน นอกจากส่วนเล็กๆนี้แล้ว โค้ดที่เหลือน่าจะคุ้นเคยกันดีอยู่แล้ว
 
 ~~~js
-Router.map(function() {
-  this.route('postsList', {
-    path: '/:postsLimit?',
-    waitOn: function() {
-      var limit = parseInt(this.params.postsLimit) || 5;
-      return Meteor.subscribe('posts', {sort: {submitted: -1}, limit: limit});
-    },
-    data: function() {
-      var limit = parseInt(this.params.postsLimit) || 5;
-      return {
-        posts: Posts.find({}, {sort: {submitted: -1}, limit: limit})
-      };
-    }
-  });
+//...
 
-  //..
+Router.route('/:postsLimit?', {
+  name: 'postsList',
+  waitOn: function() {
+    var limit = parseInt(this.params.postsLimit) || 5; 
+    return Meteor.subscribe('posts', {sort: {submitted: -1}, limit: limit});
+  },
+  data: function() {
+    var limit = parseInt(this.params.postsLimit) || 5; 
+    return {
+      posts: Posts.find({}, {sort: {submitted: -1}, limit: limit})
+    };
+  }
 });
+
+//...
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "8~13" %>
+<%= highlight "9~14" %>
 
-////
+และเนื่องจากเรากำหนดค่าของชุดข้อมูลไว้ที่ระดับเส้นทางแล้ว เราก็สามารถลบตัวช่วยเทมเพลท `posts` ที่อยู่ใน `posts_list.js` ออกไปได้ โดยลบโค้ดทั้งหมดในไฟล์ได้เลย
 
-////
+เพราะเราตั้งชื่อชุดข้อมูลว่า `posts` (ชื่อเดียวกับในตัวช่วย) ดังนั้นเราก็ไม่ต้องแก้ไขอะไรที่เทมเพลท `postsList` อีก
+
+สรุปแล้วโค้ดของ `router.js` ที่เราแก้ไขปรับปรุงใหม่ ก็จะมีหน้าตาประมาณนี้
 
 ~~~js
 Router.configure({
   layoutTemplate: 'layout',
   loadingTemplate: 'loading',
-  waitOn: function() {
+  notFoundTemplate: 'notFound',
+  waitOn: function() { 
     return [Meteor.subscribe('notifications')]
   }
 });
 
-Router.map(function() {
-  //...
-
-  this.route('postsList', {
-    path: '/:postsLimit?',
-    waitOn: function() {
-      var limit = parseInt(this.params.postsLimit) || 5;
-      return Meteor.subscribe('posts', {sort: {submitted: -1}, limit: limit});
-    },
-    data: function() {
-      var limit = parseInt(this.params.postsLimit) || 5;
-      return {
-        posts: Posts.find({}, {sort: {submitted: -1}, limit: limit})
-      };
-    }
-  });
+Router.route('/posts/:_id', {
+  name: 'postPage',
+  waitOn: function() {
+    return Meteor.subscribe('comments', this.params._id);
+  },
+  data: function() { return Posts.findOne(this.params._id); }
 });
+
+Router.route('/posts/:_id/edit', {
+  name: 'postEdit',
+  data: function() { return Posts.findOne(this.params._id); }
+});
+
+Router.route('/submit', {name: 'postSubmit'});
+
+Router.route('/:postsLimit?', {
+  name: 'postsList',
+  waitOn: function() {
+    var limit = parseInt(this.params.postsLimit) || 5; 
+    return Meteor.subscribe('posts', {sort: {submitted: -1}, limit: limit});
+  },
+  data: function() {
+    var limit = parseInt(this.params.postsLimit) || 5; 
+    return {
+      posts: Posts.find({}, {sort: {submitted: -1}, limit: limit})
+    };
+  }
+});
+
+var requireLogin = function() {
+  if (! Meteor.user()) {
+    if (Meteor.loggingIn()) {
+      this.render(this.loadingTemplate);
+    } else {
+      this.render('accessDenied');
+    }
+  } else {
+    this.next();
+  }
+}
+
+Router.onBeforeAction('dataNotFound', {only: 'postPage'});
+Router.onBeforeAction(requireLogin, {only: 'postSubmit'});
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "5, 11~21" %>
+<%= highlight "6,25~37" %>
 
 <%= commit "12-2", "Augmented the postsList route to take a limit." %>
 
-////
+ลองมาทดสอบระบบจัดแบ่งหน้าตัวใหม่ของเราดูหน่อย เนื่องจากตอนนี้หน้าโฮมของเราสามารถที่จะแสดงจำนวนโพสท์เท่าไรก็ได้เพียงแค่เปลี่ยนค่าพารามิเตอร์ใน URL อย่างเช่น ลองเรียกดูที่ `http://localhost:3000/3` คุณก็น่าจะเห็นอะไรแบบนี้
 
 <%= screenshot "12-2", "Controlling the number of posts on the homepage. " %>
 
 <% note do %>
 
-### Why Not Pages?
+### ทำไมไม่ทำเป็นหลายหน้า
 
-////
+ทำไมเราถึงใช้แนวทาง "การแบ่งหน้าแบบไม่รู้จบ" แทนที่จะแสดงหน้าละ 10 ข่าว หลายๆหน้าเรียงกัน คล้ายๆกับที่ Google ใช้แสดงผลการค้นหาล่ะ คำตอบนี้จริงๆแล้วน่าจะมาจากวิธีคิดแบบเรียลไทม์ที่ Meteor นำมาใช้
 
-////
+ลองจินตนาการดูว่า ถ้าเราแบ่งหน้าคอลเลกชั่น `Posts` โดยใช้รูปแบบการแบ่งหน้าของ Google  และเรากำลังอยู่ที่หน้า 2 ซึ่งแสดงข่าวที่ 10 ถึง 20  อะไรจะเกิดขึ้นถ้าผู้ใช้อีกคนลบบางข่าวออกไปจาก 10 ข่าวแรก
 
-////
+เนื่องจากแอพเราเป็นแบบเรียลไทม์ ชุดข้อมูลของเราก็จะเปลี่ยน ข่าวที่ 10 ก็จะกลายเป็นข่าวที่ 9 และหายไปจากหน้าจอเรา ในขณะเดียวกันข่าวที่ 11 ก็จะเข้ามาแทน ผลที่เกิดก็คือ ผู้ใช้จะเห็นว่าข่าวที่เค้าดูอยู่เปลี่ยนแปลงไปโดยไม่มีสาเหตุ !
 
-////
+แม้ว่าเราจะรับได้กับอะไรที่แปลกๆของ UX แบบนี้ การเขียนโค้ดให้แบ่งหน้าในแบบดั้งเดิมก็ค่อนข้างยุ่งยากด้วยปัญหาทางเทคนิคอยู่ดี
 
-////
+ลองกลับไปที่ตัวอย่างก่อนหน้านี้ ถ้าเราเผยแพร่ข่าวตัวที่ 10 ถึง 20 จากคอลเลคชั่น `Posts` เราจะหาข่าวพวกนี้จากไคลเอนต์ได้ยังไง เราคงไม่สามารถเลือกข่าวตั้งแต่ตัวที่ 10 ถึง 20 ได้ เพราะว่าในฝั่งไคลเอนต์เรามีข่าวแค่ 10 รายการเท่านั้น
 
-////
+มีทางออกนึงคือ เราก็เผยแพร่ข่าว 10 ตัวนั้นบนเซิร์ฟเวอร์ จากนั้นก็เรียก `Posts.find()` ที่ไคลเอนต์เพื่อดึงข่าวที่ถูกเผยแพร่มา *ทั้งหมด*
 
-////
+วิธีนี้ใช้การได้ ถ้าคุณมีการบอกรับข้อมูลแค่ตัวเดียว แต่ถ้าคุณเริ่มมีการบอกรับข้อมูลที่มากกว่าหนึ่งตัวเหมือนที่เรากำลังจะทำเร็วๆนี้
 
-////
+ถ้าการบอกรับข้อมูลตัวแรกต้องการข่าวตัวที่ 10 ถึง 20 และการบอกรับอีกตัวต้องการข่าวตัวที่ 30 ถึง 40 คุณก็จะมีข่าวที่โหลดมาไว้บนไคลเอนต์รวมแล้ว 20 ข่าว โดยไม่มีทางรู้ว่าข่าวตัวไหนเป็นของการบอกรับข้อมูลตัวไหน
 
-////
+ด้วยเหตุผลทั้งหมดที่ว่ามานี้ การแบ่งหน้าแบบเดิมก็ไม่เหมาะเท่าไรนักเมื่อนำมาใช้กับ Meteor
 
 <% end %>
 
-### Creating a Route Controller
+### สร้างตัวควบคุมเส้นทาง
 
-////
+คุณอาจสังเกตุเห็นว่า เราทำซ้ำที่บรรทัด `var limit = parseInt(this.params.postsLimit) || 5;` สองครั้ง รวมกับที่เรากำหนดเลข "5" ลงในโค้ด ไม่ใช่วิธีการที่ดีเท่าไหร่ มันอาจจะไม่ใช่จุดจบของโลก แต่การทำตามหลักการ DRY (Don't Repeat Yourself) ก็น่าจะเป็นอะไรที่ดีกว่า ถ้าคุณทำได้ ตอนนี้เรามาลองดูว่าจะปรับโค้ดตรงนี้ได้ยังไง
 
-////
+เราจะใช้คุณลักษณะใหม่ของ Iron Router คือ *ตัวควบคุมเส้นทาง (Route Controllers)*  ตัวควบคุมเส้นทางคือ วิธีง่ายๆที่จะรวมคุณสมบัติของการจัดเส้นทางหลายๆตัวเข้าด้วยกันในรูปแพ็คเกจที่เส้นทางไหนก็สามารถนำไปใช้ต่อได้ ตอนนี้เราแค่ใช้มันกับเส้นทางเดียว แต่ในบทต่อไปคุณจะเห็นว่าคุณสมบัตินี้ช่วยเราได้ดีทีเดียว
 
 ~~~js
+//...
+
 PostsListController = RouteController.extend({
   template: 'postsList',
-  increment: 5,
-  limit: function() {
-    return parseInt(this.params.postsLimit) || this.increment;
+  increment: 5, 
+  postsLimit: function() { 
+    return parseInt(this.params.postsLimit) || this.increment; 
   },
   findOptions: function() {
-    return {sort: {submitted: -1}, limit: this.limit()};
+    return {sort: {submitted: -1}, limit: this.postsLimit()};
   },
   waitOn: function() {
     return Meteor.subscribe('posts', this.findOptions());
@@ -269,44 +306,46 @@ PostsListController = RouteController.extend({
   }
 });
 
-Router.map(function() {
-  //...
+//...
 
-  this.route('postsList', {
-    path: '/:postsLimit?',
-    controller: PostsListController
-  });
+Router.route('/:postsLimit?', {
+  name: 'postsList'
 });
+
+//...
 ~~~
 <%= caption "lib/router.js" %>
+<%= highlight "3~18, 25" %>
 
-////
+เรามาลองไล่โค้ดกันดูทีละขั้นตอน ขั้นแรก เราก็สร้างตัวควบคุมของเรา โดยสร้างต่อมาจาก `RouteController` จากนั้นเราก็ตั้งค่าให้กับคุณสมบัติ `template` แบบที่เคยทำก่อนหน้า และคุณสมบัติใหม่ `increment` อีกตัว
 
-////
+ต่อมาเราก็สร้างฟังก์ชันใหม่ `postsLimit` ซึ่งจะคืนค่า limit ปัจจุบัน และฟังก์ชัน `findOptions` ซึ่งจะคืนค่าอ็อบเจกต์ตัวเลือก ขั้นตอนนี้ดูเหมือนจะไม่จำเป็น แต่เดี๋ยวเราจะได้ใช้มัน
 
-////
+ต่อไปเราก็สร้างฟังก์ชัน `waitOn` และ `data` เหมือนก่อนหน้า ยกเว้นว่า ตอนนี้พวกมันเรียกใช้ ฟังก์ชันใหม่ `findOptions` ของเราแล้ว
 
-////
+เนื่องจากตัวควบคุมของเราชื่อ `PostsListController` และเส้นทางเราชื่อ `postsList` ตัว Iron Router จะใช้ตัวควบคุมของเรากับเส้นทางเองโดยอัตโนมัติ ดังนั้นเราก็ต้องลบ `waitOn` และ `data` ออกจากข้อมูลเส้นทาง (เพราะว่าตอนนี้ตัวควบคุมจะจัดการแทน) แต่ถ้าเราใช้ชื่อตัวควบคุมต่างออกไป เราก็สามารถใช้ตัวเลือก `controller` กำหนดชื่อตัวควบคุมได้ (ซึ่งเราจะเห็นตัวอย่างแบบนี้ในบทต่อไป)
 
 <%= commit "12-3", "Refactored postsLists route into a RouteController." %>
 
-### Adding A Load More Link
+### ใส่ลิงก์ให้ปุ่มโหลดเพิ่ม
 
-////
+เรามีการแบ่งหน้าที่ทำงานได้แล้ว และโค้ดของเราก็ดูใช้ได้ดี แต่มีอีกปัญหานึง คือ เรายังไม่มีวิธีที่จะ *เรียกใช้* การแบ่งหน้า ยกเว้นว่าไปเปลี่ยนที่ URL ซะเอง ถ้าเป็นแบบนั้นผู้ใช้ต้องรู้สึกแย่แน่ๆ ดังนั้นเราจะมาแก้ไขตรงนี้กัน
 
-////
+สิ่งที่เราจะทำค่อนข้างง่ายทีเดียว เราจะเพิ่มปุ่ม "โหลดเพิ่ม" ที่ด้านล่างของข่าว ซึ่งจะเพิ่มจำนวนข่าวที่แสดงอยู่ออกไปอีก 5 ทุกครั้งที่ถูกคลิ๊ก สมมุติว่าตอนแรกเราเปิดอยู่ที่ URL `http://localhost:3000/5` เมื่อคลิ๊กที่ปุ่ม "โหลดเพิ่ม" ก็จะได้หน้า 'http://localhost:3000/10` มาแสดง ซึ่งถ้าคุณทำตามหนังสือมาได้ขนาดนี้ เราเชื่อว่าคุณสามารถจัดการตัวเลขพวกนี้ได้สบายๆ !
 
-////
+ก็เหมือนก่อนหน้านี้ เราจะเพิ่มโค้ดการแบ่งหน้าเข้าไปที่เส้นทางของเรา แต่ต้องจำไว้ว่า ตอนนี้เราใช้ชื่อชุดข้อมูลที่เราตั้งเอง ไม่ได้ใช้ตัวไม่มีชื่อที่มาจากเคอร์เซอร์ อันที่จริงก็ไม่มีกฎเกณฑ์อะไรที่บอกว่า ฟังก์ชัน `data` จะคืนได้แค่ค่า cursor ดังนั้นเราก็จะใช้เทคนิคเดียวกันนี้สร้าง URL ของปุ่ม "โหลดเพิ่ม" ขึ้นมา
 
 ~~~js
+//...
+
 PostsListController = RouteController.extend({
   template: 'postsList',
-  increment: 5,
-  limit: function() {
-    return parseInt(this.params.postsLimit) || this.increment;
+  increment: 5, 
+  postsLimit: function() { 
+    return parseInt(this.params.postsLimit) || this.increment; 
   },
   findOptions: function() {
-    return {sort: {submitted: -1}, limit: this.limit()};
+    return {sort: {submitted: -1}, limit: this.postsLimit()};
   },
   waitOn: function() {
     return Meteor.subscribe('posts', this.findOptions());
@@ -315,37 +354,39 @@ PostsListController = RouteController.extend({
     return Posts.find({}, this.findOptions());
   },
   data: function() {
-    var hasMore = this.posts().fetch().length === this.limit();
-    var nextPath = this.route.path({postsLimit: this.limit() + this.increment});
+    var hasMore = this.posts().count() === this.postsLimit();
+    var nextPath = this.route.path({postsLimit: this.postsLimit() + this.increment});
     return {
       posts: this.posts(),
       nextPath: hasMore ? nextPath : null
     };
   }
 });
+
+//...
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "16~23" %>
+<%= highlight "15~25" %>
 
-////
+ตอนนี้เราจะมาเจาะลึกดูความมหัศจรรย์บางส่วนของตัวจัดการเส้นทางกัน เราจำได้ว่าเส้นทาง `postsList` (ที่สืบทอดต่อมาจากตัวควบคุม `PostsListController` ที่เรากำลังทำอยู่) รับค่าพารามิเตอร์ `postsLimit`
 
-////
+เมื่อเราส่งค่า `{postsLimit: this.postsLimit() + this.increment}` ไปให้ `this.route.path()` ก็หมายความว่า เรากำลังบอกเส้นทาง `postsList` ให้สร้างพาธขึ้นมาโดยใช้ข้อมูลจากอ็อบเจกต์จาวาสคริปต์
 
-////
+อีกนัยหนึ่งคือ วิธีการนี้ทำงานเหมือนตอนที่เราใช้ตัวช่วยของ Spacebars `{{pathFor 'postsList'}}` ยกเว้นว่าเราแทนค่า `this` ที่ใด้มา ด้วยชุดข้อมูลที่เราสร้างเอง
 
-////
+โดยเราจะนำพาธนั้นมาใส่เข้าไปที่ชุดข้อมูล และส่งต่อให้เทมเพลท แต่เราจะทำ *เฉพาะ* ในตอนที่มีข่าวต้องแสดงเพิ่มเท่านั้น ซึ่งวิธีที่เราใช้ค่อนข้างเข้าใจยากเล็กน้อย
 
-////
+เรารู้ว่า `this.postsLimit()` จะคืนจำนวนข่าวที่เราต้องการแสดง ซึ่งอาจมาจากค่าใน URL หรือค่าตั้งต้น (5) ถ้าไม่มีพารามิเตอร์ใน URL
 
-////
+ในขณะที่ตัว `this.posts` จะอ้างถึงเคอร์เซอร์ที่กำลังใช้งานอยู่ ดังนั้น `this.posts.count()` ก็คือจำนวนข่าวที่อยู่ใน cursor ตอนนี้
 
-////
+สิ่งที่เรากำลังอธิบายตอนนี้ก็คือ ถ้าเราขอข่าวไป `n` ตัว และเราได้กลับมา `n` ตัว เราก็จะแสดงปุ่ม "โหลดเพิ่ม" แต่ถ้าเราขอไป `n` แต่ได้กลับมา *น้อย* กว่า `n` แสดงว่าเราอยู่ที่หน้าสุดท้ายแล้ว และเราก็ไม่ควรแสดงปุ่มอีก
 
-////
+จากที่บอกมา ระบบของเราจะพลาดได้ในกรณีเดียว คือ เมื่อจำนวนข่าวในฐานข้อมูลมีค่าเท่ากับ `n` *พอดี* ซึ่งถ้าเกิดเหตุการณ์แบบนั้นขึ้น ไคลเอนต์ขอไป `n` ตัว และได้กลับมา `n` ตัว ปุ่ม "โหลดเพิ่ม" ก็ยังแสดงต่อไปได้ โดยไม่รู้ว่าไม่มีข้อมูลเหลืออีกแล้ว
 
-////
+น่าเสียใจที่เรายังไม่มีวิธีแก้ไขปัญหานี้แบบง่ายๆ ดังนั้นในตอนนี้เราก็จำเป็นต้องใช้วิธีที่ยังไม่ค่อยสมบูรณ์นี้ต่อไปก่อน
 
-////
+สิ่งที่เหลือที่จะทำคือใส่ลิงก์ "load more" ที่ด้านล่างของรายการข่าว และทำให้แน่ใจว่าจะแสดงมันเมื่อมีข่าวให้โหลดเพิ่มแล้วเท่านั้น ดังนี้
 
 ~~~html
 <template name="postsList">
@@ -353,74 +394,101 @@ PostsListController = RouteController.extend({
     {{#each posts}}
       {{> postItem}}
     {{/each}}
-
+    
     {{#if nextPath}}
       <a class="load-more" href="{{nextPath}}">Load more</a>
     {{/if}}
   </div>
 </template>
 ~~~
-<%= caption "client/views/posts/posts_list.html" %>
+<%= caption "client/templates/posts/posts_list.html" %>
 <%= highlight "7~10" %>
 
-////
+ตอนนี้รายการข่าวของคุณก็น่าจะคล้ายๆแบบนี้
 
 <%= screenshot "12-3", "The “load more” button. " %>
 
 <%= commit "12-4", "Added nextPath() to the controller and use it to step through posts." %>
 
-<% note do %>
+### ประสบการณ์ของผู้ใช้ที่ดีขึ้น
 
-### Count vs Length
+การแบ่งหน้าของเราก็ใช้งานได้ดีแล้ว แต่มันดูแปลกๆอยู่นิดหน่อย ตอนที่เราคลิ๊ก "โหลดเพิ่ม" และตัวจัดการเส้นทางกำลังโหลดข้อมูลเพิ่ม ตัวฟังก์ชัน `waitOn` ของ Iron Router จะส่งเราไปที่เทมเพลท `loading` ตอนที่เรากำลังรอข้อมูลใหม่อยู่ ผลลัพธ์คือ เราถูกส่งกลับไปที่ด้านบนของหน้า และต้องเลื่อนหน้าจอกลับลงมาตรงที่เรากำลังดูอยู่ทุกครั้ง
 
-////
+ดังนั้นในขั้นแรก เราจะบอก Iron Router ว่าไม่ต้อง `waitOn` การบอกรับข้อมูลอีกแล้ว โดยเราจะสร้างการบอกรับข้อมูล ที่ฮุคของ `subscriptions` แทน
 
-<% end %>
+สังเกตุด้วยว่า เราไม่ได้ *คืนค่า* จากการบอกรับข้อมูลในฮุค เพราะว่า การคืนค่า (ซึ่งส่วนมากเราจะใช้ฮุคของ `subscriptions` กันแบบนี้) จะกระตุ้นให้ฮุคของการโหลดทำงาน ซึ่งเราไม่ต้องการให้มันเกิดขึ้นตั้งแต่แรกแล้ว โดยเราจะใช้งานฮุคของ `subscriptions` เป็นที่สำหรับสร้างการบอกรับข้อมูลเท่านั้น คล้ายๆกับการใช้ฮุค `onBeforeAction`
 
-### A Better Progress Bar
-
-////
-
-////
-
-////
-
-~~~bash
-mrt add iron-router-progress
-~~~
-<%= caption "bash console" %>
-
-////
-
-////
+นอกจากนี้เรายังคืนค่าตัวแปร `ready` ที่อ้างถึง `this.postsSub.ready` รวมมาในชุดข้อมูลด้วย โดยมันจะช่วยให้เราบอกเทมเพลทได้ว่า การบอกรับข่าวเรียบร้อยแล้วรึยัง
 
 ~~~js
-Router.map(function() {
+//...
 
-  //...
-
-  this.route('postSubmit', {
-    path: '/submit',
-    disableProgress: true
-  });
+PostsListController = RouteController.extend({
+  template: 'postsList',
+  increment: 5, 
+  postsLimit: function() { 
+    return parseInt(this.params.postsLimit) || this.increment; 
+  },
+  findOptions: function() {
+    return {sort: {submitted: -1}, limit: this.postsLimit()};
+  },
+  subscriptions: function() {
+    this.postsSub = Meteor.subscribe('posts', this.findOptions());
+  },
+  posts: function() {
+    return Posts.find({}, this.findOptions());
+  },
+  data: function() {
+    var hasMore = this.posts().count() === this.postsLimit();
+    var nextPath = this.route.path({postsLimit: this.postsLimit() + this.increment});
+    return {
+      posts: this.posts(),
+      ready: this.postsSub.ready,
+      nextPath: hasMore ? nextPath : null
+    };
+  }
 });
+
+//...
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "7" %>
+<%= highlight "12~14, 23" %>
 
-<%= commit "12-5", "Use the iron-router-progress package to make pagination nicer." %>
+จากนั้นเราจะเช็คตัวแปร `ready` ในเทมเพลท เพื่อแสดง spinner ที่ด้านล่างของรายการข่าว ในขณะที่เรากำลังโหลดข่าวชุดใหม่อยู่
 
-### Accessing Any Post
+~~~html
+<template name="postsList">
+  <div class="posts">
+    {{#each posts}}
+      {{> postItem}}
+    {{/each}}
+    
+    {{#if nextPath}}
+      <a class="load-more" href="{{nextPath}}">Load more</a>
+    {{else}}
+      {{#unless ready}}
+        {{> spinner}}
+      {{/unless}}
+    {{/if}}
+  </div>
+</template>
+~~~
+<%= caption "client/templates/posts/posts_list.html" %>
+<%= highlight "10~12" %>
 
-////
+<%= commit "12-5", "Add a spinner to make pagination nicer." %>
+
+### เข้าถึงข่าวไหนก็ได้
+
+ตอนนี้เรากำหนดให้โหลดข่าวใหม่ล่าสุดจำนวน 5 ข่าว ตามค่าตั้งต้น แต่จะเกิดอะไรขึ้นถ้ามีบางคนเปิดไปที่หน้าข่าวหน้าใดหน้าหนึ่งโดยตรงล่ะ
 
 <%= screenshot "12-4", "An empty template." %>
 
-////
+ถ้าคุณลองดู คุณก็จะพบข้อผิดพลาด `not found` ซึ่งดูมีเหตุผล เพราะเราบอกตัวจัดการเส้นทางให้บอกรับข้อมูล `posts` เมื่อโหลดเส้นทาง `postsList` เท่านั้น โดยไม่ได้บอกให้ทำอะไรกับเส้นทาง `postPage` เลย
 
-////
+มาถึงตรงนี้ ทั้งหมดที่เราทำก็คือ บอกรับข้อมูลกับข่าว `n` รายการล่าสุด คำถามคือ เราจะขอข่าวแค่รายการเดียวจากเซิร์ฟเวอร์อย่างไร เราจะบอกความลับเล็กๆให้คุณตรงนี้ว่า คุณสามารถทำการเผยแพร่ข้อมูลจากแต่ละคอลเลกชั่นได้มากกว่าหนึ่งตัว
 
-////
+ดังนั้นเราก็จะเรียกข่าวที่หายไปของเรากลับคืนมา โดยเราจะสร้างการเผยแพร่แบบ `singlePost` แยกออกมา ทำหน้าที่เผยแพร่ข่าวแค่ตัวเดียว ตามค่าของ `_id`
 
 ~~~js
 Meteor.publish('posts', function(options) {
@@ -428,45 +496,44 @@ Meteor.publish('posts', function(options) {
 });
 
 Meteor.publish('singlePost', function(id) {
-  return id && Posts.find(id);
+  check(id, String)
+  return Posts.find(id);
 });
+
+//...
 ~~~
 <%= caption "server/publications.js" %>
 <%= highlight "5~7" %>
 
-////
+ตอนนี้ เราก็บอกรับข้อมูลข่าวในแบบที่เราต้องการในฝั่งไคลเอนต์ได้แล้ว โดยเราได้บอกรับข้อมูลของ `coments` ในฟังก์ชัน `waitOn` ที่เส้นทาง `postPage` ไว้แล้ว ดังนั้นเราก็เพิ่มแค่การบอกรับข้อมูลของ `singlePost` เข้าไปตรงนั้นด้วย แล้วก็อย่าลืมเพิ่มการบอกรับนี้เข้าไปที่เส้นทาง `postEdit` ด้วย เพราะว่ามันก็ใช้ข้อมูลเดียวกัน
 
 ~~~js
-Router.map(function() {
+//...
 
-  //...
-
-  this.route('postPage', {
-    path: '/posts/:_id',
-    waitOn: function() {
-      return [
-        Meteor.subscribe('singlePost', this.params._id),
-        Meteor.subscribe('comments', this.params._id)
-      ];
-    },
-    data: function() { return Posts.findOne(this.params._id); }
-  });
-
-  this.route('postEdit', {
-    path: '/posts/:_id/edit',
-    waitOn: function() {
-      return Meteor.subscribe('singlePost', this.params._id);
-    },
-    data: function() { return Posts.findOne(this.params._id); }
-  });
-
-  /...
-
+Router.route('/posts/:_id', {
+  name: 'postPage',
+  waitOn: function() {
+    return [
+      Meteor.subscribe('singlePost', this.params._id),
+      Meteor.subscribe('comments', this.params._id)
+    ];
+  },
+  data: function() { return Posts.findOne(this.params._id); }
 });
+
+Router.route('/posts/:_id/edit', {
+  name: 'postEdit',
+  waitOn: function() { 
+    return Meteor.subscribe('singlePost', this.params._id);
+  },
+  data: function() { return Posts.findOne(this.params._id); }
+});
+
+//...
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "7~12,18~20" %>
+<%= highlight "6~9,16~18" %>
 
 <%= commit "12-6","Use a single post subscription to ensure that we can always see the right post." %>
 
-////
+และแล้วการแบ่งหน้าก็เสร็จเรียบร้อย แอพของเราก็ไม่มีปัญหาเรื่องขนาดอีกต่อไป และผู้ใช้ก็น่าจะเข้ามาป้อนลิงก์ข่าวได้มากขึ้นกว่าเดิม คุณว่ามันจะดีมั้ยถ้าเราจะหาวิธีจัดอันดับให้ข่าวพวกนี้ และคุณรู้อะไรมั้ย เรื่องนี้คือสิ่งที่เราเตรียมไว้ในบทต่อไป !
