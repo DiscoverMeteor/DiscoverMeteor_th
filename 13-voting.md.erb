@@ -1,41 +1,39 @@
 ---
-title: การโหวต (Voting)
+title: การโหวต
 slug: voting
 date: 0013/01/01
 number: 13
-contents: Build a system where users can vote on posts.|Rank our posts by vote on a "best" post page.|Learn how to write a general handlebars helper.|Learn a little more about data security in Meteor.|Cover some interesting performance considerations in MongoDB.
+contents: สร้างระบบที่ผู้ใช้สามารถโหวตข่าวได้|จัดอันดับข่าวตามการโหวตข่าวที่ดีที่สุด|เรียนรู้วิธีเขียนตัวช่วย Spacebars|เรียนรู้เพิ่มเติมเกี่ยวกับความปลอดภัยของข้อมูลใน Meteor|เรื่องที่น่าสนใจเกี่ยวกับประสิทธิภาพใน MongoDB
 paragraphs: 49
 ---
 
-////
+ตอนนี้ไซต์ของเรากำลังได้รับความนิยมเพิ่มขึ้น การค้นหาว่าข่าวที่ดีที่สุดจะเป็นเรื่องยากในเวลาอันรวดเร็ว ที่เราต้องการคือ ระบบจัดลำดับบางอย่างที่จะมาช่วยเรา
 
-////
+โดยเราอาจจะสร้างระบบจัดลำดับที่ซับซ้อนด้วย karma ที่เป็นระบบลดแต้มตามระยะเวลา และตัวอื่นๆ (ส่วนมากมีอยู่ใน [Telescope](http://telesc.pe) พี่ใหญ่ของ Microscope) แต่กับแอพของเรา เราจะทำกันแบบง่ายๆ ให้สามารถจัดลำดับข่าวได้ตามจำนวนโหวตที่ได้รับก็พอ
 
-////
+เราจะเริ่มด้วยการหาทางให้ผู้ใช้ทำการโหวตข่าวได้
 
-### Data Model
+### โมเดลข้อมูล
 
-////
+เราจะเก็บรายการผู้โหวตของแต่ละข่าว เพื่อที่เราจะรู้ว่าเมื่อใดควรแสดงปุ่มโหวตให้ผู้ใช้เห็น และในขณะเดียวกันก็ป้องกันการโหวตซ้ำได้ด้วย
 
 <% note do %>
 
-### Data Privacy & Publications
+### ความเป็นส่วนตัวของข้อมูล และการเผยแพร่
 
-////
+เราจะเผยแพร่รายการผู้โหวตให้กับผู้ใช้ทุกคน ซึ่งทำให้ใครก็ได้เข้าถึงข้อมูลนี้ได้จากคอนโซลของเบราว์เซอร์โดยอัตโนมัติ
 
-////
-
-////
+เรื่องนี้เป็นปัญหาเกี่ยวกับความเป็นส่วนตัวของข้อมูลที่เกิดขึ้นเนื่องจากวิธีการทำงานของคอลเลกชั่น ตัวอย่างเช่น เราต้องการให้ผู้ใช้รู้ว่า มีใครโหวตข่าวของเค้ากันบ้าง ในกรณีนี้ การเปิดเผยข้อมูลไม่น่าจะส่งผลอะไรตามมา แต่มันก็สำคัญที่อย่างน้อยเราก็รับรู้ปัญหานี้
 
 <% end %>
 
-////
+และเราจะทำการ denormalize จำนวนผู้โหวตของข่าว เพื่อทำให้มันง่ายที่จะดึงตัวเลขนี้มาใช้ ดังนั้นเราก็จะเพิ่มแอททริบิวต์เข้าไปที่ข่าวของเราสองตัวคือ `upvoters` และ `votes` โดยเราจะทำการเพิ่มเข้าไปในโค้ดสร้างข้อมูลตั้งต้น ดังนี้
 
 ~~~js
 // Fixture data
 if (Posts.find().count() === 0) {
   var now = new Date().getTime();
-
+  
   // create two users
   var tomId = Meteor.users.insert({
     profile: { name: 'Tom Coleman' }
@@ -45,108 +43,115 @@ if (Posts.find().count() === 0) {
     profile: { name: 'Sacha Greif' }
   });
   var sacha = Meteor.users.findOne(sachaId);
-
+  
   var telescopeId = Posts.insert({
     title: 'Introducing Telescope',
     userId: sacha._id,
     author: sacha.profile.name,
     url: 'http://sachagreif.com/introducing-telescope/',
-    submitted: now - 7 * 3600 * 1000,
+    submitted: new Date(now - 7 * 3600 * 1000),
     commentsCount: 2,
-    upvoters: [], votes: 0
+    upvoters: [], 
+    votes: 0
   });
-
+  
   Comments.insert({
     postId: telescopeId,
     userId: tom._id,
     author: tom.profile.name,
-    submitted: now - 5 * 3600 * 1000,
+    submitted: new Date(now - 5 * 3600 * 1000),
     body: 'Interesting project Sacha, can I get involved?'
   });
-
+  
   Comments.insert({
     postId: telescopeId,
     userId: sacha._id,
     author: sacha.profile.name,
-    submitted: now - 3 * 3600 * 1000,
+    submitted: new Date(now - 3 * 3600 * 1000),
     body: 'You sure can Tom!'
   });
-
+  
   Posts.insert({
     title: 'Meteor',
     userId: tom._id,
     author: tom.profile.name,
     url: 'http://meteor.com',
-    submitted: now - 10 * 3600 * 1000,
+    submitted: new Date(now - 10 * 3600 * 1000),
     commentsCount: 0,
-    upvoters: [], votes: 0
+    upvoters: [], 
+    votes: 0
   });
-
+  
   Posts.insert({
     title: 'The Meteor Book',
     userId: tom._id,
     author: tom.profile.name,
     url: 'http://themeteorbook.com',
-    submitted: now - 12 * 3600 * 1000,
+    submitted: new Date(now - 12 * 3600 * 1000),
     commentsCount: 0,
-    upvoters: [], votes: 0
+    upvoters: [], 
+    votes: 0
   });
-
+  
   for (var i = 0; i < 10; i++) {
     Posts.insert({
       title: 'Test post #' + i,
       author: sacha.profile.name,
       userId: sacha._id,
       url: 'http://google.com/?q=test-' + i,
-      submitted: now - i * 3600 * 1000,
+      submitted: new Date(now - i * 3600 * 1000 + 1),
       commentsCount: 0,
-      upvoters: [], votes: 0
+      upvoters: [], 
+      votes: 0
     });
   }
 }
 ~~~
 <%= caption "server/fixtures.js" %>
-<%= highlight "22, 48, 58, 69" %>
+<%= highlight "22,23,49,50,60,61,72,73" %>
 
-////
+ก็เหมือนเคย ให้ปิดการทำงานของแอพ รัน `meteor reset` และสั่งให้แอพเริ่มทำงานใหม่ แล้วก็สร้างบัญชีผู้ใช้ใหม่ โดยต้องทำให้แน่ใจว่า คุณสมบัติสองตัวนี้ถูกกำหนดค่าเมื่อตอนสร้างข่าวด้วย
 
 ~~~js
 //...
 
-// check that there are no previous posts with the same link
-if (postAttributes.url && postWithSameLink) {
-  throw new Meteor.Error(302,
-    'This link has already been posted',
-    postWithSameLink._id);
+var postWithSameLink = Posts.findOne({url: postAttributes.url});
+if (postWithSameLink) {
+  return {
+    postExists: true,
+    _id: postWithSameLink._id
+  }
 }
 
-// pick out the whitelisted keys
-var post = _.extend(_.pick(postAttributes, 'url', 'title', 'message'), {
-  userId: user._id,
-  author: user.username,
-  submitted: new Date().getTime(),
+var user = Meteor.user();
+var post = _.extend(postAttributes, {
+  userId: user._id, 
+  author: user.username, 
+  submitted: new Date(),
   commentsCount: 0,
-  upvoters: [],
+  upvoters: [], 
   votes: 0
 });
 
 var postId = Posts.insert(post);
 
-return postId;
+return {
+  _id: postId
+};
 
 //...
 ~~~
 <%= caption "collections/posts.js" %>
-<%= highlight "16~17" %>
+<%= highlight "17~18" %>
 
-### Building our Voting Templates
+### Voting Templates
 
-////
+แรกสุด เราจะเพิ่มปุ่มโหวตเข้าไปข้างหน้าชื่อข่าว และแสดงจำนวนโหวตที่ข้อมูลข่าว
 
 ~~~html
 <template name="postItem">
   <div class="post">
-    <a href="#" class="upvote btn">⬆</a>
+    <a href="#" class="upvote btn btn-default">⬆</a>
     <div class="post-content">
       <h3><a href="{{url}}">{{title}}</a><span>{{domain}}</span></h3>
       <p>
@@ -156,16 +161,16 @@ return postId;
         {{#if ownPost}}<a href="{{pathFor 'postEdit'}}">Edit</a>{{/if}}
       </p>
     </div>
-    <a href="{{pathFor 'postPage'}}" class="discuss btn">Discuss</a>
+    <a href="{{pathFor 'postPage'}}" class="discuss btn btn-default">Discuss</a>
   </div>
 </template>
 ~~~
-<%= caption "client/views/posts/post_item.html" %>
+<%= caption "client/templates/posts/post_item.html" %>
 <%= highlight "3,7" %>
 
 <%= screenshot "13-1", "The upvote button" %>
 
-////
+ต่อมาเราจะเรียกเมธอด `upvote` ที่เซิร์ฟเวอร์ เมื่อผู้ใช้คลิ๊กที่ปุ่ม
 
 ~~~js
 //...
@@ -180,57 +185,59 @@ Template.postItem.events({
 <%= caption "client/views/posts/post_item.js" %>
 <%= highlight "3~8" %>
 
-////
+สุดท้ายเราจะกลับไปที่ไฟล์ `lib/collections/posts.js`ของเรา และเพิ่มเมธอดฝั่งเซิร์ฟเวอร์นี้เข้าไป เพื่อให้โหวตข่าวได้
 
 ~~~js
+//...
+
 Meteor.methods({
   post: function(postAttributes) {
     //...
   },
-
+  
   upvote: function(postId) {
-    var user = Meteor.user();
-    // ensure the user is logged in
-    if (!user)
-      throw new Meteor.Error(401, "You need to login to upvote");
-
+    check(this.userId, String);
+    check(postId, String);
+    
     var post = Posts.findOne(postId);
     if (!post)
-      throw new Meteor.Error(422, 'Post not found');
-
-    if (_.include(post.upvoters, user._id))
-      throw new Meteor.Error(422, 'Already upvoted this post');
-
+      throw new Meteor.Error('invalid', 'Post not found');
+    
+    if (_.include(post.upvoters, this.userId))
+      throw new Meteor.Error('invalid', 'Already upvoted this post');
+    
     Posts.update(post._id, {
-      $addToSet: {upvoters: user._id},
+      $addToSet: {upvoters: this.userId},
       $inc: {votes: 1}
     });
   }
 });
+
+//...
 ~~~
-<%= caption "collections/posts.js" %>
-<%= highlight "6~23" %>
+<%= caption "lib/collections/posts.js" %>
+<%= highlight "8~25" %>
 
 <%= commit "13-1", "Added basic upvoting algorithm." %>
 
-////
+เมธอดนี้ทำงานแบบตรงไปตรงมา เริ่มจากเราทำการเช็คเพื่อให้แน่ใจว่า ผู้ใช้ล็อกอินเข้ามา และมีข่าวอยู่จริง จากนั้นเราก็เช็คซ้ำอีกทีว่าผู้ใช้ยังไม่ได้โหวตที่ข่าวนี้ และถ้าพวกเค้ายังไม่ได้ทำ เราจะเพิ่มจำนวนโหวต และใส่เค้าเข้าไปในรายชื่อผู้โหวต
 
-////
+ส่วนขั้นตอนสุดท้ายเป็นอะไรที่น่าสนใจ จากที่เราได้ใช้ตัวดำเนินการแบบพิเศษของ Mongo มาสองสามตัว ก็ยังมีอีกหลายตัวที่ต้องเรียนรู้ แต่ที่ใช้ประโยชน์ได้มากก็คือ `$addToSet` ที่ใช้เพิ่มค่าเข้าไปในอาร์เรย์ตราบใดที่มันยังไม่มีอยู่ในนั้น กับ `$inc` ที่ใช้เพิ่มค่าของฟิลด์จำนวนเต็ม
 
-### User Interface Tweaks
+### ปรับแต่งส่วนติดต่อผู้ใช้
 
-////
+ถ้าผู้ใช้ยังไม่ได้ล็อกอิน หรือเคยโหวตข่าวนี้มาแล้ว พวกเค้าก็ต้องโหวตไม่ได้ เพื่อแสดงให้รู้ที่ UI เราจะใช้ตัวช่วยทำการเพิ่มคลาส CSS ชื่อ `disabled` เข้าไปที่ปุ่มโหวตตามเงื่อนไข
 
 ~~~html
 <template name="postItem">
   <div class="post">
-    <a href="#" class="upvote btn {{upvotedClass}}">⬆</a>
+    <a href="#" class="upvote btn btn-default {{upvotedClass}}">⬆</a>
     <div class="post-content">
       //...
   </div>
 </template>
 ~~~
-<%= caption "client/views/posts/post_item.html" %>
+<%= caption "client/templates/posts/post_item.html" %>
 <%= highlight "3" %>
 
 ~~~js
@@ -258,19 +265,19 @@ Template.postItem.events({
   }
 });
 ~~~
-<%= caption "client/views/posts/post_item.js" %>
+<%= caption "client/templates/posts/post_item.js" %>
 <%= highlight "8~15, 19" %>
 
-////
+เราเพิ่งจะเปลี่ยนคลาสจาก `.upvote` เป็น `.upvotable` ดังนั้นต้องไม่ลืมที่จะเปลี่ยนมันที่ตัวจัดการเหตุการณ์ click ด้วย
 
 <%= screenshot "13-2", "Greying out upvote buttons." %>
 
 <%= commit "13-2", "Grey out upvote link when not logged in / already voted." %>
 
-////
+ถัดมา คุณอาจจะสังเกตุว่า ข่าวที่มีโหวตเดียวจะแสดงเป็น "1 vote**s**" ดังนั้นเราก็จะใช้เวลาตอนนี้จัดการเรื่องพหุพจน์ให้ถูกต้อง การทำให้เป็นพหุพจน์อาจเป็นเรื่องที่ซับซ้อนได้ แต่ตอนนี้เราแค่ทำแบบง่ายๆ โดยเราจะใช้ตัวช่วยของ Spacebars ที่สามารถนำมาใช้ตรงไหนก็ได้ ดังนี้
 
 ~~~js
-Handlebars.registerHelper('pluralize', function(n, thing) {
+Template.registerHelper('pluralize', function(n, thing) {
   // fairly stupid pluralizer
   if (n === 1) {
     return '1 ' + thing;
@@ -279,295 +286,325 @@ Handlebars.registerHelper('pluralize', function(n, thing) {
   }
 });
 ~~~
-<%= caption "client/helpers/handlebars.js" %>
+<%= caption "client/helpers/spacebars.js" %>
 
-////
+โดยตัวช่วยที่เราทำกันมาก่อนหน้านี้จะผูกกับเทมเพลทที่เกี่ยวข้องกันอยู่ แต่ถ้าเราใช้ `Template.registerHelper` จะเป็นการสร้างตัวช่วยแบบ *global* ที่สามารถเรียกใช้ได้จากทุกเทมเพลท
 
 ~~~html
 <template name="postItem">
+
 //...
+
 <p>
   {{pluralize votes "Vote"}},
   submitted by {{author}},
   <a href="{{pathFor 'postPage'}}">{{pluralize commentsCount "comment"}}</a>
   {{#if ownPost}}<a href="{{pathFor 'postEdit'}}">Edit</a>{{/if}}
 </p>
+
 //...
+
 </template>
 ~~~
-<%= caption "client/views/posts/post_item.html" %>
-<%= highlight "4, 6" %>
+<%= caption "client/templates/posts/post_item.html" %>
+<%= highlight "6, 8" %>
 
 <%= screenshot "13-3", "Perfecting Proper Pluralization (now say that 10 times)" %>
 
 <%= commit "13-3", "Added pluralize helper to format text better." %>
 
-////
+ตอนนี้เราก็ควรเห็นเป็น "1 vote" แล้ว
 
-### Smarter Voting Algorithm
+### อัลกอริทึมการโหวตที่ฉลาดขึ้น
 
-////
+โค้ดการโหวตของเราดูดีทีเดียว แต่เรายังทำให้ดีขึ้นได้อีก ในเมธอด upvote นั้น เราเรียก Mongo ไปสองครั้ง ครั้งแรกเพื่อดึงข่าว อีกครั้งเพื่ออัพเดทมัน
 
-////
+การทำแบบนี้จะทำให้เกิดปัญหาสองเรื่อง เรื่องแรก มันไม่ค่อยจะมีประสิทธิภาพเท่าไหร่ที่เรียกใช้ฐานข้อมูลถึงสองครั้ง แต่ที่สำคัญกว่านั้น มันทำให้เกิดกรณีที่แข่งขันกัน (race condition) เกิดขึ้น ซึ่งตอนนี้เรากำลังทำงานตามขั้นตอนของอัลกอริทึมแบบนี้
 
-1. ////
-2. ////
-3. ////
+1. ดึงข่าวจากฐานข้อมูล
+2. เช็คดูว่าผู้ใช้โหวตหรือยัง
+3. ถ้ายัง ให้ทำการโหวตด้วยชื่อผู้ใช้
 
-////
+แต่ถ้าเกิดผู้ใช้คนเดียวกันทำการโหวตอีกครั้งที่ข่าวเดิม ในขณะที่มีการทำงานอยู่ระหว่างขั้นตอนที่ 1 และ 3 ล่ะ จะเห็นว่าโค้ดที่เรากำลังใช้เปิดโอกาสให้ผู้ใช้สามารถโหวตที่ข่าวเดียวกันได้ถึงสองครั้ง แต่โชคดีที่ Mongo ยอมให้เราทำอะไรที่ฉลาดกว่านั้น ด้วยการรวมขั้นตอนที่ 1 ถึง 3 เข้าด้วยกันให้เป็นคำสั่งของ Mongo เพียงคำสั่งเดียว ดังนี้
 
 ~~~js
+//...
+
 Meteor.methods({
   post: function(postAttributes) {
     //...
   },
-
+  
   upvote: function(postId) {
-    var user = Meteor.user();
-    // ensure the user is logged in
-    if (!user)
-      throw new Meteor.Error(401, "You need to login to upvote");
-
-    Posts.update({
-      _id: postId,
-      upvoters: {$ne: user._id}
+    check(this.userId, String);
+    check(postId, String);
+    
+    var affected = Posts.update({
+      _id: postId, 
+      upvoters: {$ne: this.userId}
     }, {
-      $addToSet: {upvoters: user._id},
+      $addToSet: {upvoters: this.userId},
       $inc: {votes: 1}
     });
+    
+    if (! affected)
+      throw new Meteor.Error('invalid', "You weren't able to upvote that post");
   }
 });
+
+//...
 ~~~
 <%= caption "collections/posts.js" %>
-<%= highlight "12~15" %>
+<%= highlight "12~21" %>
 
 <%= commit "13-4", "Better upvoting algorithm." %>
 
-////
-
-////
+อธิบายง่ายๆได้ว่า "ให้หาข่าวด้วย `id` ที่ผู้ใช้คนนี้ยังไม่ได้โหวต และอัพเดทมันแบบนี้" ถ้าผู้ใช้ *ยังไม่เคย* โหวต มันก็จะพบข่าวที่มี `id` นั้น ในทำนองกลับกัน ถ้าผู้ใช้ *ได้* โหวตแล้ว ผลที่ได้คือ ไม่พบข่าวเลย และก็ไม่มีอะไรเกิดขึ้นหลังจากนั้น
 
 <% note do %>
 
-### Latency Compensation
+### การชดเชยความล่าช้า
 
-////
+สมมุติว่าคุณพยายามจะโกงระบบ เพื่อส่งข่าวใดข่าวนึงของคุณขึ้นไปอยู่อันดับบนสุด ด้วยการปรับค่าจำนวนโหวตแบบนี้
 
 ~~~js
 > Posts.update(postId, {$set: {votes: 10000}});
 ~~~
 <%= caption "Browser console" %>
 
-////
+(เมื่อ `postId` คือ id ของข่าวคุณ)
 
-////
+การกระทำแบบไร้ยางอายที่จะหลอกระบบแบบนี้จะถูกจับได้ด้วยฟังก์ชัน callback แบบ `deny()` (ใน `collections/posts.js` จำกันได้มั้ย) และถูกปฏิเสธกลับไปทันที 
 
-////
+แต่ถ้าคุณสังเกตุให้ดี คุณอาจจะเห็นการทำงานเพื่อชดเชยความล่าช้าเกิดขึ้น มันอาจจะทำงานเร็ว แต่ข่าวนั้นก็จะกระโดดไปอยู่ด้านบน ก่อนที่จะเด้งกลับมาที่ตำแหน่งเดิม
 
-////
+มันเกิดอะไรขึ้นกันแน่ คำตอบคือ ในคอลเลกชั่น `Posts` ที่ไคลเอนต์ การ `update` ทำได้โดยไม่ติดอะไร และเกิดขึ้นทันที ทำให้ข่าวเด้งไปอยู่ที่ด้านบน ในขณะที่ฝั่งเซิร์ฟเวอร์ การ `update` จะถูกปฏิเสธ และต่อมาหลังจากนั้น (ไม่กี่มิลลิวินาที ถ้าคุณรัน Meteor ที่เครื่องคุณเอง) เซิร์ฟเวอร์ก็ส่งข้อผิดพลาดกลับมา และบอกให้คอลเลกชั่นที่ไคลเอนต์คืนค่ากลับตามเดิม
 
-////
+ผลที่เกิดขึ้นก็คือ ขณะที่รอการตอบสนองจากเซิร์ฟเวอร์อยู่นั้น ตัวหน้าจอเองไม่สามารถทำอะไรได้นอกจากใช้ข้อมูลจากคอลเลกชั่นที่โลคอลเท่านั้น หลังจากที่เซิร์ฟเวอร์ตอบกลับมาและปฏิเสธการเปลี่ยนแปลงนั้น หน้าจอถึงค่อยปรับตามอีกครั้ง
 
 <% end %>
 
-### Ranking the Front Page Posts
+### จัดอันดับข่าวในหน้าแรก
 
-////
+ตอนนี้เราก็มีคะแนนของข่าวแต่ละตัวจากจำนวนโหวตแล้ว เราจะมาแสดงรายการข่าวที่ดีที่สุดกัน การจะทำแบบนั้นได้ เราต้องดูว่า จะจัดการตัวบอกรับข้อมูลที่แยกเป็นสองตัวของคอลเลกชั่นข่าว และทำให้เทมเพลท `postsList` ดูดีขึ้น ได้อย่างไร
 
-////
+เริ่มต้นจากที่เราต้องการให้มีการบอกรับข้อมูล *สอง* ตัว แต่ละตัวสำหรับการจัดเรียงลำดับที่ต่างกัน เคล็ดลับของวิธีนี้ก็คือ ทั้งคู่จะบอกรับการเผยแพร่จากข้อมูล `posts` *ตัวเดียวกัน* จะต่างกันก็เพียงพารามิเตอร์ที่เรียกใช้เท่านั้น
 
-////
+และเราก็ต้องสร้างเส้นทางขึ้นใหม่สองตัวชื่อ `newPosts` และ `bestPosts` เข้าถึงได้จาก URL `/new` และ `/best` ตามลำดับ (แน่นอนว่า ต้องใช้ได้ทั้ง `/new/5` และ `/best/5` เมื่อมีการแบ่งหน้า )
 
-////
+โดยเราจะ *ขยาย* ตัวควบคุม `PostsListController` ของเราให้เป็นตัวควบคุมใหม่ที่แตกต่างกันคือ `NewPostsListController` และ `BestPostsListController`ซึ่งทำให้เราสามารถใช้ตัวเลือกของเส้นทางที่เหมือนกันกับของ `home` และ `newPosts` ได้ใหม่อีกครั้ง โดยใช้วิธีสืบทอดจากตัวควบคุม `PostsListController` เพียงตัวเดียว และที่มากกว่านั้นคือ มันช่วยให้เราเห็นว่า Iron Router ยืดหยุ่นได้มากขนาดไหน
+
+และเปลี่ยนค่าการจัดเรียงจากเดิม `{submitted: -1}` ใน `PostsListController` ให้เป็น `this.sort` ที่จะถูกส่งค่ามาจากตัวควบคุม `NewPostsListController` และ `BestPostsListController` อีกที
 
 ~~~js
+//...
+
 PostsListController = RouteController.extend({
   template: 'postsList',
-  increment: 5,
-  limit: function() {
-    return parseInt(this.params.postsLimit) || this.increment;
+  increment: 5, 
+  postsLimit: function() { 
+    return parseInt(this.params.postsLimit) || this.increment; 
   },
   findOptions: function() {
-    return {sort: this.sort, limit: this.limit()};
+    return {sort: this.sort, limit: this.postsLimit()};
   },
-  waitOn: function() {
-    return Meteor.subscribe('posts', this.findOptions());
+  subscriptions: function() {
+    this.postsSub = Meteor.subscribe('posts', this.findOptions());
   },
   posts: function() {
     return Posts.find({}, this.findOptions());
   },
   data: function() {
-    var hasMore = this.posts().fetch().length === this.limit();
+    var hasMore = this.posts().count() === this.postsLimit();
     return {
       posts: this.posts(),
+      ready: this.postsSub.ready,
       nextPath: hasMore ? this.nextPath() : null
     };
   }
 });
 
-NewPostsListController = PostsListController.extend({
+NewPostsController = PostsListController.extend({
   sort: {submitted: -1, _id: -1},
   nextPath: function() {
-    return Router.routes.newPosts.path({postsLimit: this.limit() + this.increment})
+    return Router.routes.newPosts.path({postsLimit: this.postsLimit() + this.increment})
   }
 });
 
-BestPostsListController = PostsListController.extend({
+BestPostsController = PostsListController.extend({
   sort: {votes: -1, submitted: -1, _id: -1},
   nextPath: function() {
-    return Router.routes.bestPosts.path({postsLimit: this.limit() + this.increment})
+    return Router.routes.bestPosts.path({postsLimit: this.postsLimit() + this.increment})
   }
 });
 
-Router.map(function() {
-  this.route('home', {
-    path: '/',
-    controller: NewPostsListController
-  });
-
-  this.route('newPosts', {
-    path: '/new/:postsLimit?',
-    controller: NewPostsListController
-  });
-
-  this.route('bestPosts', {
-    path: '/best/:postsLimit?',
-    controller: BestPostsListController
-  });
-  // ..
+Router.route('/', {
+  name: 'home',
+  controller: NewPostsController
 });
+
+Router.route('/new/:postsLimit?', {name: 'newPosts'});
+
+Router.route('/best/:postsLimit?', {name: 'bestPosts'});
 ~~~
 <%= caption "lib/router.js" %>
-<%= highlight "8,16,21~34,36~49" %>
+<%= highlight "10,23,27~55" %>
 
-////
+ให้สังเกตุว่าตอนนี้เรามีมากกว่าหนึ่งเส้นทางแล้ว และเราก็ถอดโค้ดของ `nextPath` ออกจาก `PostsListController` และใส่ลงไปใน `NewPostsController` และ `BestPostsController` เนื่องจากตอนนี้พาธจะแตกต่างกันทั้งสองกรณี
 
-////
+นอกจากนี้ เมื่อเราจัดเรียงผลตาม `votes` เราใช้วิธีการจัดเรียงตามวันที่ป้อนข่าว และตาม `_id` เพื่อให้แน่ใจว่า การจัดลำดับถูกต้องตามที่กำหนด
 
-////
+เมื่อตัวควบคุมของเราพร้อม เราก็สามารถลบเส้นทาง `postsList` ตัวก่อนออกไปได้อย่างปลอดภัย เพียงแค่ลบโค้ดต่อไปนี้ออกไป
+
+```
+ Router.route('/:postsLimit?', {
+  name: 'postsList'
+ })
+```
+<%= caption "lib/router.js" %>
+
+นอกจากนี้เรายังเพิ่มลิงก์เข้าไปที่ส่วนหัวด้วย
 
 ~~~html
 <template name="header">
-  <header class="navbar">
-    <div class="navbar-inner">
-      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+  <nav class="navbar navbar-default" role="navigation">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navigation">
+        <span class="sr-only">Toggle navigation</span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
-      </a>
-      <a class="brand" href="{{pathFor 'home'}}">Microscope</a>
-      <div class="nav-collapse collapse">
-        <ul class="nav">
-          <li>
-            <a href="{{pathFor 'newPosts'}}">New</a>
-          </li>
-          <li>
-            <a href="{{pathFor 'bestPosts'}}">Best</a>
-          </li>
-          {{#if currentUser}}
-            <li>
-              <a href="{{pathFor 'postSubmit'}}">Submit Post</a>
-            </li>
-            <li class="dropdown">
-              {{> notifications}}
-            </li>
-          {{/if}}
-        </ul>
-        <ul class="nav pull-right">
-          <li>{{loginButtons}}</li>
-        </ul>
-      </div>
+      </button>
+      <a class="navbar-brand" href="{{pathFor 'home'}}">Microscope</a>
     </div>
-  </header>
+    <div class="collapse navbar-collapse" id="navigation">
+      <ul class="nav navbar-nav">
+        <li>
+          <a href="{{pathFor 'newPosts'}}">New</a>
+        </li>
+        <li>
+          <a href="{{pathFor 'bestPosts'}}">Best</a>
+        </li>
+        {{#if currentUser}}
+          <li>
+            <a href="{{pathFor 'postSubmit'}}">Submit Post</a>
+          </li>
+          <li class="dropdown">
+            {{> notifications}}
+          </li>
+        {{/if}}
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        {{> loginButtons}}
+      </ul>
+    </div>
+  </nav>
 </template>
 ~~~
-<%= caption "client/views/include/header.html" %>
-<%= highlight "9, 15~21" %>
+<%= caption "client/templates/includes/header.html" %>
+<%= highlight "11, 15~20" %>
 
-////
+และสุดท้าย เราก็ต้องอัพเดทตัวจัดการเหตุการณ์ตอนลบข่าวด้วย
+
+~~~html
+  'click .delete': function(e) {
+    e.preventDefault();
+    
+    if (confirm("Delete this post?")) {
+      var currentPostId = this._id;
+      Posts.remove(currentPostId);
+      Router.go('home');
+    }
+  }
+~~~
+<%= caption "client/templates/posts/posts_edit.js" %>
+<%= highlight "7" %>
+
+หลังจากที่ทำมาทั้งหมด ตอนนี้เราก็จะได้รายการข่าวที่ดีที่สุดแบบนี้
 
 <%= screenshot "13-4", "Ranking by points" %>
 
 <%= commit "13-5", "Added routes for post lists, and pages to display them." %>
 
-### A Better Header
+### ปรับส่วนหัวให้ดีขึ้น
 
-////
+ตอนนี้เราก็มีหน้าข่าวสองหน้าแล้ว และมันก็บอกยากว่าตอนนี้เรากำลังดูหน้าไหนอยู่ ดังนั้นเราก็จะมาปรับส่วนหัวเพื่อทำให้มันชัดเจนมากขึ้น โดยเราจะสร้างตัวจัดการ `header.js` และสร้างตัวช่วยที่ทำงานด้วยค่าพาธปัจจุบันกับเส้นทางแบบมีชื่อตั้งแต่หนึ่งตัวขึ้นไป มาช่วยกำหนดคลาสให้กับตัวนำทางของเรา
 
-////
+เหตุผลที่เราต้องรองรับเส้นทางแบบมีชื่อหลายตัวก็เพราะว่า ทั้งเส้นทาง `home` และ `newPosts` ของเรานั้น (ที่ตรงกับ URL `/` และ `/new` ตามลำดับ) ใช้เทมเพลทตัวเดียวกัน นั่นหมายความว่า ตัว `activeRouteClass` ของเรา ต้องฉลาดพอที่จะสร้างแท็ก `<li>` ที่แอคทีฟ ได้ทั้งสองกรณี
 
 ~~~html
 <template name="header">
-  <header class="navbar">
-    <div class="navbar-inner">
-      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+  <nav class="navbar navbar-default" role="navigation">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navigation">
+        <span class="sr-only">Toggle navigation</span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
-      </a>
-      <a class="brand" href="{{pathFor 'home'}}">Microscope</a>
-      <div class="nav-collapse collapse">
-        <ul class="nav">
-          <li class="{{activeRouteClass 'home' 'newPosts'}}">
-            <a href="{{pathFor 'newPosts'}}">New</a>
-          </li>
-          <li class="{{activeRouteClass 'bestPosts'}}">
-            <a href="{{pathFor 'bestPosts'}}">Best</a>
-          </li>
-          {{#if currentUser}}
-            <li class="{{activeRouteClass 'postSubmit'}}">
-              <a href="{{pathFor 'postSubmit'}}">Submit Post</a>
-            </li>
-            <li class="dropdown">
-              {{> notifications}}
-            </li>
-          {{/if}}
-        </ul>
-        <ul class="nav pull-right">
-          <li>{{loginButtons}}</li>
-        </ul>
-      </div>
+      </button>
+      <a class="navbar-brand" href="{{pathFor 'home'}}">Microscope</a>
     </div>
-  </header>
+    <div class="collapse navbar-collapse" id="navigation">
+      <ul class="nav navbar-nav">
+        <li class="{{activeRouteClass 'home' 'newPosts'}}">
+          <a href="{{pathFor 'newPosts'}}">New</a>
+        </li>
+        <li class="{{activeRouteClass  'bestPosts'}}">
+          <a href="{{pathFor 'bestPosts'}}">Best</a>
+        </li>
+        {{#if currentUser}}
+          <li class="{{activeRouteClass 'postSubmit'}}">
+            <a href="{{pathFor 'postSubmit'}}">Submit Post</a>
+          </li>
+          <li class="dropdown">
+            {{> notifications}}
+          </li>
+        {{/if}}
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        {{> loginButtons}}
+      </ul>
+    </div>
+  </nav>
 </template>
 ~~~
-<%= caption "client/views/includes/header.html" %>
-<%= highlight "9,12,15,19" %>
+<%= caption "client/templates/includes/header.html" %>
+<%= highlight "15,18,22" %>
 
 ~~~js
 Template.header.helpers({
   activeRouteClass: function(/* route names */) {
     var args = Array.prototype.slice.call(arguments, 0);
     args.pop();
-
+    
     var active = _.any(args, function(name) {
-      return Router.current().route.name === name
+      return Router.current() && Router.current().route.getName() === name
     });
-
+    
     return active && 'active';
   }
 });
 ~~~
-<%= caption "client/views/includes/header.js" %>
+<%= caption "client/templates/includes/header.js" %>
 
 <%= screenshot "13-5", "Showing the active page" %>
 
 <% note do %>
 
-### Helper Arguments
+### อาร์กิวเมนต์ของตัวช่วย
 
-////
+ที่ผ่านมาเรายังไม่เคยใช้ตัวช่วยในรูปแบบนี้กันเลย ซึ่งตัวช่วยเทมเพลทนั้นก็เหมือนกับแท็กของ Spacebars ตัวอื่นๆคือ สามารถรับอาร์กิวเมนต์ได้ 
 
-////
+โดยทั่วไปคุณสามารถส่งผ่านอาร์กิวเมนต์ตามชื่อที่กำหนดให้กับฟังก์ชันได้อยู่แล้ว และคุณก็ยังสามารถส่งค่าพารามิเตอร์แบบไม่มีชื่อที่ไม่จำกัดจำนวนได้อีกด้วย โดยเรียกใช้พวกมันได้จากอ็อบเจกต์ `arguments` ภายในฟังก์ชัน
 
-////
+ในกรณีหลังนั้น บางทีคุณอาจจำเป็นต้องแปลงอ็อบเจกต์ `arguments` ให้เป็นอาร์เรย์ของจาวาสคริปต์ แล้วค่อยดึงมันมาใช้ด้วย `pop()` เพื่อกำจัดค่าแฮช (hash) ที่เพิ่มเข้าไปในตอนท้ายโดย Spacebars
 
 <% end %>
 
-////
+ในตัวนำทางแต่ละตัวนั้น ตัวช่วย `activeRouteClass` จะดึงรายชื่อเส้นทางไปใช้ และใช้ตัวช่วย `any()` ของ Underscore ตรวจดูว่ามีเส้นทางไหนที่ผ่านการทดสอบ (เช่น มี URL ตรงกับพาธปัจจุบัน)
 
-////
+ถ้ามีเส้นทางไหนตรงกับพาธปัจจุบัน `any()` จะคืนค่า `true` และสุดท้ายเราก็ได้ใช้ประโยชน์จากรูปแบบ `boolean && string` ของจาวาสคริปต์ ที่ `false && myString` ได้ค่า `false` แต่ `true && myString` ได้ค่าเป็น `myString`
 
 <%= commit "13-6", "Added active classes to the header." %>
 
-////
+ตอนนี้ผู้ใช้ของเราก็สามารถโหวตข่าวได้แบบเรียลไทม์กันแล้ว และเราก็เห็นข่าวเด้งไปมาในหน้าโฮม เมื่ออันดับของมันเปลี่ยนไป แต่มันจะดีมั้ย ถ้าเรามีวิธีที่ช่วยทำให้การทำงานตรงนี้มันราบรื่นขึ้นด้วยการใช้อนิเมชั่นที่เหมาะสม
