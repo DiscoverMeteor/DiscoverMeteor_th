@@ -3,268 +3,357 @@ title: Animations
 slug: animations
 date: 0014/01/01
 number: 14
-contents: See what happens behind the scenes when Meteor swaps two DOM elements.|Learn how to animate the reordering of posts.|Learn how to animate the insertion of new posts.
+contents: เข้าใจว่าเกิดอะไรขึ้นเบื้องหลังเมื่อ Meteor สลับที่ส่วนประกอบของ DOM สองตัว|เรียนรู้วิธีทำแอนิเมชันเมื่อมีการจัดลำดับข่าว|เรียนรู้วิธีทำแอนิเมชันกับการเพิ่มและลบข่าว|เรียนรู้วิธีทำแอนิเมชันระหว่างหน้า
 paragraphs: 58
 ---
 
-////
+ตอนนี้เรามีทั้ง การโหวตแบบเรียลไทม์ การให้คะแนน และการจัดลำดับแล้ว แต่มันกลับทำให้เกิดประสบการณ์ใช้งานที่ไม่ค่อยดี ข่าวเด้งไปมาทั่วหน้าโฮมเพจ ดังนั้นเราจะมาแก้ปัญหานี้ด้วยการทำแอนิเมชั่นกัน
 
-### Meteor & the DOM
+### รู้จักกับ `_uihooks`
 
-////
+`_uihooks` ค่อนข้างใหม่ และเป็นคุณสมบัติที่ยังไม่ได้เปิดเผยของ Blaze โดยมีความหมายตามชื่อ คือ ใช้ดักจับเหตุการณ์ต่างๆที่เกิดขึ้นเมื่อส่วนประกอบต่างๆถูกเพิ่ม ลบ หรือเคลื่อนที่
 
-////
+โดยมีรายชื่อ ฮุค ดังต่อไปนี้
 
-////
+- `insertElement`: ถูกเรียกใช้เมื่อ ส่วนประกอบใหม่ ถูกเพิ่มเข้าไป
+- `moveElement`:ถูกเรียกใช้เมื่อ ส่วนประกอบ ถูกเปลี่ยนตำแหน่ง
+- `removeElement`: ถูกเรียกใช้เมื่อ ส่วนประกอบ ถูกลบออก
 
-////
+เมื่อทำการกำหนดค่าแล้ว ฮุคเหล่านี้จะเข้าไป *แทนที่* การทำงานพื้นฐานของ Meteor ซึ่งหมายความได้ว่า แทนที่จะ เพิ่ม ย้าย หรือ ลบส่วนประกอบออกไป Meteor จะทำงานตามที่เรากำหนดไว้แทน และนั่นก็ขึ้นอยู่กับเราว่าจะทำให้มันใช้งานได้ยังไง
 
-1. ////
-2. ////
-3. ////
-4. ////
-5. ////
-6. ////
+### Meteor และ DOM
 
-////
+ก่อนที่เราจะทำเรื่องสนุกๆ (เช่น เคลื่อนย้ายบางอย่าง) เราจำเป็นต้องเข้าใจวิธีที่ Meteor ทำงานกับ DOM (Document Object Model หรือ คอลเลกชั่นของส่วนประกอบ HTML ที่รวมกันเป็นหน้าเว็บ) เสียก่อน
 
-<%= diagram "animation_diagram", "Swtiching two posts", "pull-center" %>
+จุดสำคัญที่ต้องจำไว้ก็คือ ส่วนประกอบใน DOM ไม่สามารถ *ย้าย* ได้จริง แต่พวกมันสามารถ ลบ และสร้างใหม่ได้ (ตรงนี้เป็นข้อจำกัดของ DOM เอง ไม่ใช่ของ Meteor) ดังนั้นถ้าต้องการให้เห็นว่า ส่วนประกอบ A สลับตำแหน่งกับ B สิ่งที่ Meteor ทำคือ ลบส่วนประกอบ B และแทรกสำเนาตัวใหม่ (B') ไปไว้ข้างหน้า A
 
-////
+วิธีนี้ทำให้การสร้างแอนิเมชันดูยากนิดนึง เหตุผลก็เพราะว่า เราไม่สามารถทำให้ B เกิดการเคลื่อนที่โดยแค่ย้ายมันไปที่ตำแหน่งใหม่ได้ เนื่องจาก B อาจจะหายไปเมื่อถึงเวลาที่ Meteor สร้างหน้าเพจใหม่อีกครั้ง (ซึ่งเกิดขึ้นทันทีจากการทำงานแบบรีแอคทีฟ) แต่ไม่ต้องกังวลอะไรมาก เราจะหาทางออกได้
 
-////
+### นักวิ่งโซเวียต
 
-////
+ก่อนอื่น มาฟังเรื่องเล่ากัน
 
-### Proper Timing
+เมื่อปี 1980  ปีที่สงครามเย็นเข้าครอบงำ กีฬาโอลิมปิคถูกจัดขึ้นที่เมืองมอสโคว และโซเวียตต้องการที่จะชนะการแข่งวิ่ง 100 เมตร โดยยอมทำทุกอย่างขอให้ชนะก็พอ นักวิทยาศาสตร์ระดับสุดยอดของโซเวียตก็ได้ทำการติดตั้งเครื่องเทเลพอร์ตให้กับนักกีฬาโซเวียตคนนึง เมื่อเสียงปืนดังขึ้น นักวิ่งคนนั้นก็หายไปจากจุดสตาร์ท และถูกส่งผ่านเข้าไปที่ห้วงรอยต่อของอวกาศและเวลาออกไปโผล่ที่เส้นชัยทันที
 
-////
+แต่โชคดีที่ กรรมการก็สังเกตุเห็นสิ่งผิดปรกติในทันทีเช่นกัน นักกีฬาคนนั้นจึงไม่มีทางเลือกต้องเทเลพอร์ตตัวเองกลับไปที่จุดสตาร์ท ก่อนที่จะได้รับอนุญาตให้เข้าแข่งอีกครั้ง โดยต้องวิ่งเหมือนกับคนอื่นๆ
 
-////
+แหล่งข่าวทางประวัติศาสตร์ของผมอาจไม่ค่อยน่าเชื่อถือนัก ดังนั้นคุณก็ไม่ต้องเชื่อเรื่องนี้ก็ได้ แต่ขอให้พยายามจำเรื่อง "นักวิ่งโซเวียตกับเครื่องเทเลพอร์ต" นี้ไว้ให้ขึ้นใจ เมื่อเราอ่านบทนี้กัน
 
-////
+### แยกออกเป็นชิ้นๆ
 
-////
+เมื่อ Meteor ได้รับการอัพเดทและทำการแก้ไข DOM แบบรีแอคทีฟนั้น ข่าวของเราก็จะถูกเทเลพอร์ตไปที่ตำแหน่งสุดท้ายทันที เหมือนกับนั่งวิ่งโซเวียต แต่ไม่ว่าที่โอลิมปิค หรือในแอพเรา ก็ไม่มีเครื่องเทเลพอร์ตให้ใช้ ดังนั้นเราก็จะเทเลพอร์ตส่วนประกอบกลับไปที่ "จุดเริ่มต้น" และทำให้มัน "วิ่ง" (หรือที่เรียกว่า เคลื่อนที่ไป) จนถึงเส้นชัย
 
-////
+การที่จะสลับตำแหน่งข่าว A และ B  (ในตำแหน่ง p1 และ p2 ตามลำดับ) เราก็ต้องทำตามขั้นตอนต่อไปนี้
 
-////
+1. ลบ B
+2. สร้าง B' ก่อน A ใน DOM
+3. เทเลพอร์ท B' ไป p2
+4. เทเลพอร์ท A ไป p1
+5. เคลื่อนที่ A ไป p2
+6. เคลื่อนที่ B' to p1
 
-### CSS Positioning
+ภาพข้างล่างจะอธิบายขั้นตอนพวกนี้ได้แบบละเอียด
 
-////
+<%= diagram "animation_diagram", "Switching two posts", "pull-center" %>
 
-////
+ย้ำอีกครั้ง ในขั้นตอนที่ 3 และ 4 นั้น เราไม่ได้ *เคลื่อนที่* A และ B' ไปที่ตำแหน่งของมัน แต่เรา "ทำการเทเลพอร์ต" พวกมันไปแทน เนื่องจากมันเกิดขึ้นทันที ทำให้เราเห็นเหมือนกับว่า B ไม่ได้ถูกลบออกไป และส่วนประกอบทั้งคู่ที่จะถูกเคลื่อนที่นั้น ก็ถูกวางไว้ที่ตำแหน่งใหม่ของมันอย่างถูกต้อง
 
-////
+โดยปกติ Meteor จะจัดการขั้นตอนที่ 1 และ 2 ให้ ซึ่งโค้ดตรงนี้เราเขียนเองได้ไม่ยาก ส่วนในขั้นตอนที่ 5 และ 6 ที่เราต้องทำคือ ย้ายมันไปยังตำแหน่งที่ถูกต้องของมัน ดังนั้นส่วนที่เราต้องคิดก็คือ ขั้นตอนที่ 3 และ 4 ที่ต้องส่งพวกมันไปที่จุดเริ่มต้นของการเคลื่อนที่
 
-////
+### การจัดวางตำแหน่งของ CSS
 
-////
+การทำแอนิเมชั่นกับข่าวที่กำลังถูกจัดลำดับทั่วทั้งหน้านั้น เราต้องเข้าไปเกี่ยวข้องในส่วนของ CSS แน่ๆ ดังนั้นเราก็จะมาทบทวนเรื่องการจัดวางตำแหน่งของ CSS กันหน่อย
+
+ส่วนประกอบของหน้า ตามปกติแล้ว จะใช้การจัดวางตำแหน่งแบบ **static**  ซึ่งการจัดวางแบบ static นี้ ตำแหน่งของส่วนประกอบจะถูกวางไปตามการไหลของข้อมูลในหน้านั้น โดยตำแหน่งในหน้าจอของพวกมันไม่สามารถเปลี่ยนแปลง หรือเคลื่อนที่ได้
+
+การจัดวางตำแหน่งแบบ **Relative** จะกลับกันคือ ส่วนประกอบจะถูกวางตามการไหลของข้อมูล แต่สามารถเปลี่ยนตำแหน่ง *ให้สัมพันธ์กับตำแหน่งเริ่มต้นได้*
+
+การจัดวางตำแหน่งแบบ **Absolute** จะไปอีกขั้น คือ ยอมให้คุณกำหนดตำแหน่งของส่วนประกอบด้วยพิกัด x/y ที่สัมพันธ์กับ **document** หรือ **ส่วนประกอบตัวแม่ที่จัดวางตำแหน่งแบบ absolute หรือ relative**
+
+ในที่นี้เราจะใช้การจัดวางตำแหน่งแบบ relative กับการทำแอนิเมชั่นของข่าว ซึ่งเราได้เตรียม CSS ไว้ให้คุณแล้ว แต่ถ้าคุณต้องการทำด้วยตัวเอง ที่คุณต้องทำคือ เพิ่มโค้ดนี้เข้าไปในสไตล์ชีทของคุณ
 
 ~~~css
 .post{
   position:relative;
+}
+.post.animate{
   transition:all 300ms 0ms ease-in;
 }
 ~~~
 <%= caption "client/stylesheets/style.css" %>
 
-////
+สังเกตุด้วยว่า เราทำแอนิเมชั่นกับข่าวที่มี CSS คลาสเป็น `.animate` เท่านั้น ทำให้เราสามารถที่จะควบคุมให้เกิดหรือไม่เกิดการแอนิเมชั่น ด้วยการเพิ่มหรือลบคลาสนี้
 
-////
+ตรงนี้ทำให้ขั้นตอนที่ 5 และ 6 ง่ายไปเลย ที่เราต้องทำทั้งหมดก็แค่ รีเซ็ท `top` ให้เป็น `0px` (ค่าตั้งต้น) แล้วข่าวของเราก็จะกลับไปที่ตำแหน่ง "ปกติ" ของมัน
 
-<% note do %>
+ดังนั้น งานที่ท้าทายของเราก็คือ หาตำแหน่ง *ตั้งต้น* (ตำแหน่ง 3 และ 4) ของการเคลื่อนที่ ซึ่งสัมพันธ์กับตำแหน่งใหม่ของพวกมัน พูดให้ง่ายขึ้นคือ ต้องเลื่อนพวกมันไปเท่าไหร่ ซึ่งก็ไม่ใช่เรื่องยากอะไรเหมือนกัน ระยะที่ต้องเลื่อนออกไป คิดง่ายๆก็จะเท่ากับ ตำแหน่งข่าวตอนแรก ลบด้วยตำแหน่งใหม่
 
-### Position:absolute
+### ใช้งาน `_uihooks`
 
-////
+เมื่อเราเข้าใจถึงปัจจัยต่างๆที่ต้องใช้ทำแอนิเมชั่นกับรายการข้อมูลแล้ว ตอนนี้เราก็พร้อมที่จะทำแอนิเมชั่นกัน แรกสุดเราต้องห่อรายการข่าวไว้ใน `div` ตัวหุ้ม `.wrapper`
 
-////
-
-<% end %>
-
-### Total Recall
-
-////
-
-////
-
-> //// 
-
-////
-
-////
-
-### Ranking Posts
-
-////
-
-////
-
-////
-
-////
-
-~~~js
-Template.postsList.helpers({
-  postsWithRank: function() {
-    this.posts.rewind();
-    return this.posts.map(function(post, index, cursor) {
-      post._rank = index;
-      return post;
-    });
-  }
-});
-~~~
-<%= caption "/client/views/posts/posts_list.js" %>
-<%= highlight "2~8" %>
-
-////
-
-////
-
-~~~html
+```html
 <template name="postsList">
-  <div class="posts">
-    {{#each postsWithRank}}
-      {{> postItem}}
-    {{/each}}
+  <div class="posts page">
+    <div class="wrapper">
+      {{#each posts}}
+        {{> postItem}}
+      {{/each}}
+    </div>
     
     {{#if nextPath}}
       <a class="load-more" href="{{nextPath}}">Load more</a>
+    {{else}}
+      {{#unless ready}}
+        {{> spinner}}
+      {{/unless}}
     {{/if}}
   </div>
 </template>
-~~~
-<%= caption "/client/views/posts/posts_list.html" %>
+```
+<%= caption "client/templates/posts/posts_list.html" %>
+<%= highlight "3,7" %>
 
-<%= highlight "3" %>
+ก่อนทำอย่างอื่นต่อ เราจะมาดูพฤติกรรมของรายการข่าว ตอนที่ *ยังไม่มี* แอนิเมชั่นกันก่อน
+
+<%= gifscreenshot "14-1", "The non-animated post list." %>
+
+ตอนนี้เราจะนำ `_uihooks` มาใช้ โดยเราจะเลือกแท็ก div `.wrapper` จากข้างในฟังก์ชัน callback `onRendered` ของเทมเพลท และสร้างฮุค `moveElement` ดังนี้
+
+```js
+Template.postsList.onRendered(function () {
+  this.find('.wrapper')._uihooks = {
+    moveElement: function (node, next) {
+      // do nothing for now
+    }
+  }
+});
+```
+<%= caption "client/templates/posts/posts_list.js" %>
+<%= highlight "1~7" %>
+
+ตัวฟังก์ชัน `moveElement` ที่เราเพิ่งสร้างนี้จะถูกเรียกใช้เมื่อใดก็ตามที่ตำแหน่งของส่วนประกอบเปลี่ยนแปลงไป *แทน* การทำงานเดิมของ Blaze และเนื่องจากฟังก์ชันนี้ว่างเปล่า ดังนั้นจึง *ไม่มีอะไรเกิดขึ้น*
+
+ว่าแล้วก็ลองทดสอบกันดู โดยเปิดไปที่หน้า "Best" และทำการโหวตข่าวสองสามตัว จะเห็นว่าลำดับของมันไม่เปลี่ยนแปลง จนกว่าคุณจะสั่งให้มันสร้างหน้าใหม่ (โดยการรีโหลด หรือเปลี่ยนเส้นทาง)
+
+<%= gifscreenshot "14-2", "An empty moveElement callback: nothing happens" %>
+
+ตอนนี้เราก็แน่ใจแล้วว่า `_uihooks` ทำงานได้ ต่อจากนี้เราจะมาทำให้มันเคลื่อนที่กัน!
+
+### ทำแอนิเมชั่นให้การจัดลำดับข่าว
+
+ฮุค `moveElement` รับค่าสองอาร์กิวเมนท์ `node` และ `next`
+
+- `node` เป็นส่วนประกอบตัวปัจจุบันที่กำลังเคลื่อนที่ไปยังตำแหน่งใหม่ใน DOM 
+- `next` เป็นส่วนประกอบตัวที่อยู่ *ถัดไป* จากตำแหน่งใหม่ที่ `node` กำลังย้ายไป
+
+จากข้อมูลตรงนี้ เราก็สามารถทำการสร้างแอนิเมชั่นได้ (ถ้าคุณต้องการทบทวนความจำ ก็สามารถกลับไปอ่านเรื่อง "นักวิ่งโซเวียต" ได้ตามสบาย) โดยเมื่อตรวจพบว่า มีการเปลี่ยนแปลงตำแหน่งใหม่เกิดขึ้น เราจะ
+
+1. เพิ่ม `node` ก่อน `next` (ซึ่งก็คือ การทำงานเดิมที่เกิดขึ้นก่อนที่เราจะกำหนดฮุค `moveElement`)
+2. ย้าย `node` กลับไปที่ตำแหน่งเดิม
+3. ดันส่วนประกอบทุกตัวที่อยู่ระหว่าง `node` และ `next` ออก เพื่อให้มีที่ว่างสำหรับ `node`
+4. เคลื่อนที่ ส่วนประกอบทั้งหมด กลับไปที่ตำแหน่งใหม่ของมัน
+
+โดยเราจะทำตามขั้นตอนพวกนี้ด้วยความสามารถของ [jQuery](http://jquery.com) ไลบรารี่จัดการ DOM ที่ดีที่สุดแล้วในตอนนี้ ซึ่งวิธีการใช้งาน jQuery จะอยู่นอกเหนือขอบเขตของหนังสือเล่มนี้ แต่เราก็จะมาดูเมธอดของ jQuery ที่จะนำมาใช้กันแบบคร่าวๆ ดังนี้
+
+- [`$()`](http://api.jquery.com/jQuery/): หุ้มส่วนประกอบของ DOM ด้วยเมธอด jQuery เพื่อทำให้เป็นอ็อบเจกต์แบบ jQuery
+- [`offset()`](http://api.jquery.com/offset/): ดึงตำแหน่งปัจจุบันของส่วนประกอบ โดยสัมพันธ์กับ *the document* และคืนอ็อบเจ็กต์ที่มีค่า `top` และ `left`
+- [`outerHeight()`](http://api.jquery.com/outerHeight/): หาค่าความสูง "ภายนอก" (รวม padding และ margin ได้) ของส่วนประกอบ
+- [`nextUntil(selector)`](http://api.jquery.com/nextUntil/): หาส่วนประกอบทั้งหมดที่อยู่ข้างหลังจนถึงตัวส่วนประกอบ (ไม่รวมเข้าไป) ที่ตรงกับ `selector`
+- [`insertBefore(selector)`](http://api.jquery.com/insertBefore/): แทรกส่วนประกอบไปข้างหน้าตัวที่ตรงกับ `selector`
+- [`removeClass(class)`](http://api.jquery.com/removeClass/): ลบ CSS class `class` ที่มีอยู่ในส่วนประกอบ
+- [`css(propertyName, propertyValue)`](http://api.jquery.com/css/): ตั้งค่าคุณสมบัติ `_propertyName` ให้มีค่าเป็น `propertyValue`
+- [`height()`](http://api.jquery.com/height/): หาความสูงของส่วนประกอบ
+- [`addClass(class)`](http://api.jquery.com/addClass/): เพิ่ม CSS Class `class` เข้าไปที่ส่วนประกอบ
+
+```js
+Template.postsList.onRendered(function () {
+  this.find('.wrapper')._uihooks = {
+    moveElement: function (node, next) {
+      var $node = $(node), $next = $(next);
+      var oldTop = $node.offset().top;
+      var height = $node.outerHeight(true);
+      
+      // find all the elements between next and node
+      var $inBetween = $next.nextUntil(node);
+      if ($inBetween.length === 0)
+        $inBetween = $node.nextUntil(next);
+      
+      // now put node in place
+      $node.insertBefore(next);
+      
+      // measure new top
+      var newTop = $node.offset().top;
+      
+      // move node *back* to where it was before
+      $node
+        .removeClass('animate')
+        .css('top', oldTop - newTop);
+      
+      // push every other element down (or up) to put them back
+      $inBetween
+        .removeClass('animate')
+        .css('top', oldTop < newTop ? height : -1 * height)
+        
+      
+      // force a redraw
+      $node.offset();
+      
+      // reset everything to 0, animated
+      $node.addClass('animate').css('top', 0);
+      $inBetween.addClass('animate').css('top', 0);
+    }
+  }
+});
+```
+<%= caption "client/templates/posts/posts_list.js" %>
+
+คำอธิบายเพิ่มเติม
+
+- เราคำนวนความสูงของ `$node` เพื่อจะได้รู้ว่าจะต้องเลื่อนตัวส่วนประกอบ `$inBetween` ไปเท่าไหร่ และเราใช้ `outerHeight(true)` เพื่อใช้ทั้ง margin และ padding  มาคำนวนด้วย
+- เราไม่รู้ว่า `next` มาก่อนหรือหลัง `node` เมื่อเราไล่ลงมาใน DOM เราก็เลยเช็คค่าทั้งสองตัว เมื่อเราสร้าง `$inBetween`
+- การสลับระหว่าง "เทเลพอร์ต" กับ "แอนิเมชั่น" เราใช้การปิดเปิด CSS คลาส `animate` (การเกิดแอนิเมชั่นถูกกำหนดในโค้ด CSS ของแอพแล้ว)
+- เนื่องจากเราใช้การจัดตำแหน่งแบบ relative เราก็ต้องรีเซ็ทค่า `top` ของส่วนประกอบให้เป็น 0 เพื่อนำมันกลับไปยังที่ที่มันควรจะอยู่ 
 
 <% note do %>
 
-### Be Kind, Rewind
+### สั่งให้วาดใหม่
 
-////
+คุณอาจจะสงสัยเกี่ยวกับบรรทัด `$node.offset` ว่า ทำไมเราต้องหาตำแหน่งของ `$node` ถ้าเราไม่คิดจะทำอะไรกับมัน
 
-////
+ให้คุณคิดอย่างนี้ ถ้าคุณสั่งให้หุ่นยนตร์ที่ทำงานได้ตรงตามคำสั่งว่า ให้วิ่งไปทางเหนือ 5 กิโลเมตร แล้วเมื่อทำเสร็จให้กลับมาที่จุดเริ่มต้น มันอาจจะสรุปได้ว่า ตัวมันจะต้องกลับมาอยู่ที่เดิม และอาจทำการรักษาพลังงานโดยไม่วิ่งไปที่ไหนเลย
 
-////
+ดังนั้นการที่เราจะแน่ใจว่าหุ่นยนตร์ของเราจะวิ่งทั้งหมด 10 กิโลเมตรจริงๆ เราก็ต้องขอให้มันวัดพิกัดที่ตำแหน่ง 5 กม. ก่อนจะหันกลับมา
+
+เบราว์เซอร์ก็ทำงานคล้ายๆกัน ถ้าเราใช้คำสั่ง `css('top', oldTop - newTop)` และ `css('top', 0)` 
+ทั้งคู่พร้อมๆกัน พิกัดใหม่ก็จะไปแทนที่ตัวเดิมและไม่มีอะไรเกิดขึ้นอีก ดังนั้นถ้าเราต้องการเห็นแอนิเมชั่นจริงๆ เราต้องสั่งให้เบราว์เซอร์วาดภาพส่วนประกอบใหม่หลังจากที่เปลี่ยนตำแหน่งแรกไปแล้ว
+
+และวิธีง่ายๆที่จะสั่งให้วาดใหม่ก็คือ สอบถามค่าค่า `offset` ของส่วนประกอบนั้น ซึ่งมันไม่มีทางรู้ว่าเป็นเท่าไหร่ จนกว่าจะวาดส่วนประกอบนั้นขึ้นใหม่อีกครั้ง
 
 <% end %>
 
-### Putting it together
+ลองเล่นมันดูหน่อย ให้กลับไปที่หน้า "Best" แล้วลองโหวตดู คุณควรเห็นข่าวของเราวิ่งขึ้นลงอย่างนุ่มนวลราวกับนักบัลเล่ต์
 
-////
-
-~~~js
-Template.postItem.helpers({
-  //...
-});
-
-Template.postItem.rendered = function(){
-  // animate post from previous position to new position
-  var instance = this;
-  var rank = instance.data._rank;
-  var $this = $(this.firstNode);
-  var postHeight = 80;
-  var newPosition = rank * postHeight;
- 
-  // if element has a currentPosition (i.e. it's not the first ever render)
-  if (typeof(instance.currentPosition) !== 'undefined') {
-    var previousPosition = instance.currentPosition;
-    // calculate difference between old position and new position and send element there
-    var delta = previousPosition - newPosition;
-    $this.css("top", delta + "px");
-  }
-  
-  // let it draw in the old position, then..
-  Meteor.defer(function() {
-    instance.currentPosition = newPosition;
-    // bring element back to its new original position
-    $this.css("top",  "0px");
-  }); 
-};
-
-Template.postItem.events({
-  //...
-});
-~~~
-<%= caption "/client/views/posts/post_item.js" %>
-<%= highlight "5~27" %>
+<%= gifscreenshot "14-3", "Animated reordering" %>
 
 <%= commit "14-1", "Added post reordering animation." %>
 
-////
+### ทำยังไงก็เฟดฉันไม่ได้
 
-////
+หลังจากที่เราจัดการเรื่องการจัดลำดับใหม่ไปแล้ว การทำแอนิเมชั่นที่ข่าวซึ่งกำลังถูกเพิ่มและลบก็เป็นเรื่องหมูๆ
 
-////
+ขั้นแรก เราจะทำให้ข่าวใหม่ค่อยๆปรากฏขึ้นมา (เพื่อความง่าย ครั้งนี้เราจะทำแอนิเมชั่นด้วยจาวาสคริปต์)
 
-### Animating New Posts
-
-////
-
-////
-
-1. ////
-2. ////
-
-////
-
-////
-
-~~~js
-Template.postItem.helpers({
-  //...
-});
-
-Template.postItem.rendered = function(){
-  // animate post from previous position to new position
-  var instance = this;
-  var rank = instance.data._rank;
-  var $this = $(this.firstNode);
-  var postHeight = 80;
-  var newPosition = rank * postHeight;
-  
-  // if element has a currentPosition (i.e. it's not the first ever render)
-  if (typeof(instance.currentPosition) !== 'undefined') {
-    var previousPosition = instance.currentPosition;
-    // calculate difference between old position and new position and send element there
-    var delta = previousPosition - newPosition;
-    $this.css("top", delta + "px");
-  } else {
-    // it's the first ever render, so hide element
-    $this.addClass("invisible");
+```js
+Template.postsList.onRendered(function () {
+  this.find('.wrapper')._uihooks = {
+    insertElement: function (node, next) {
+      $(node)
+        .hide()
+        .insertBefore(next)
+        .fadeIn();
+    },
+    moveElement: function (node, next) {
+      //...
+    }
   }
-  
-  // let it draw in the old position, then..
-  Meteor.defer(function() {
-    instance.currentPosition = newPosition;
-    // bring element back to its new original position
-    $this.css("top",  "0px").removeClass("invisible");
-  }); 
-};
-
-Template.postItem.events({
-  //...
 });
-~~~
-<%= caption "/client/views/posts/post_item.js" %>
-<%= highlight "19~22,28" %>
+```
+<%= caption "client/templates/posts/posts_list.js" %>
+<%= highlight "3~7" %>
+
+เพื่อให้เห็นภาพชัดเจน เราจะทดสอบแอนิเมชั่นตัวใหม่โดยการเพิ่มข่าวผ่านคอนโซลดังนี้
+
+```js
+Meteor.call('postInsert', {url: 'http://apple.com', title: 'Testing Animations'})
+```
+
+<%= gifscreenshot "14-4", "Fading in new posts" %>
+
+ต่อจากนั้นเราจะทำให้ข่าวที่ถูกลบค่อยๆเลือนหายไป
+
+```js
+Template.postsList.onRendered(function () {
+  this.find('.wrapper')._uihooks = {
+    insertElement: function (node, next) {
+      $(node)
+        .hide()
+        .insertBefore(next)
+        .fadeIn();
+    },
+    moveElement: function (node, next) {
+      //...
+    },
+    removeElement: function(node) {
+      $(node).fadeOut(function() {
+        $(this).remove();
+      });
+    }
+  }
+});
+```
+<%= caption "client/templates/posts/posts_list.js" %>
+<%= highlight "12~16" %>
+
+ลองอีกครั้ง โดยลบข่าวจากคอนโซล (ใช้คำสั่ง `Posts.remove('somePostId')`) เพื่อดูผลที่เกิดขึ้น
+
+<%= gifscreenshot "14-5", "Fading out deleted posts" %>
 
 <%= commit "14-2", "Fade items in when they are drawn." %>
 
-////
+### การเปลี่ยนหน้า
 
-<% note do %>
+ที่ผ่านมาเราทำแอนิเมชั่นกับส่วนประกอบที่อยู่ *ข้างใน* หน้า แต่ถ้าเราต้องการให้มีแอนิเมชั่นเกิดขึ้น *ในระหว่าง* ที่เปลี่ยนหน้าจะทำอย่างไร
 
-### CSS & JavaScript
+การเปลี่ยนหน้าเป็นงานของ Iron Router เมื่อคุณคลิ๊กที่ลิงก์ ข้อมูลที่ตัวช่วย `{{< yield}}` ใน `layout.html` ก็จะถูกแทนที่
 
-////
+ซึ่งมันก็เหมือนกับที่เราเปลี่ยนพฤติกรรมของ Blaze ให้หน้าข่าวของเรา เราก็สามารถทำอย่างเดียวกันกับ `{{> yield}}` ได้ โดยเพิ่มการเปลี่ยนหน้าแบบเฟดเข้าไปในระหว่างเส้นทาง !
 
-////
+ถ้าเราต้องการทั้งเฟดเข้าและออก เราก็ต้องแสดงหน้าทั้งหมดให้ซ้อนทับกัน โดยใช้ `position:absolute` กับ div  ตัวหุ้ม `.page` ที่หุ้มเทมเพลทของทุกหน้า
 
-<% end %>
+เราไม่ต้องการให้หน้าของเรามีตำแหน่งสัมพันธ์กับกรอบเบราว์เซอร์ (window) เพราะว่าข้อมูลจะไปทับกับหัวด้านบนได้ เราก็เลยให้ `position:relative` กับ div ตัวหุ้ม `#main` เพื่อทำให้ค่า `position:absolute` ของ div  ตัวหุ้ม `.page` มีพิกัดเริ่มต้นจาก `#main`
 
-////
+เพื่อประหยัดเวลา เราก็เพิ่มโค้ด CSS ที่จำเป็นเข้าไปใน `style.css` ดังนี้
+
+```css
+//...
+
+#main{
+  position: relative;
+}
+.page{
+  position: absolute;
+  top: 0px;
+  width: 100%;
+}
+
+//...
+```
+<%= caption "client/stylesheets/style.css" %>
+
+ตอนนี้ก็ถึงเวลาลงโค้ดที่ใช้ทำให้หน้าเฟดกันได้แล้ว จะเห็นว่าโค้ดนี้ดูแล้วคุ้นๆตา เนื่องจากมันเหมือนกับตัวที่เราใช้ตอนเพิ่มและลบข่าว
+
+```js
+Template.layout.onRendered(function() {
+  this.find('#main')._uihooks = {
+    insertElement: function(node, next) {
+      $(node)
+        .hide()
+        .insertBefore(next)
+        .fadeIn();
+    },
+    removeElement: function(node) {
+      $(node).fadeOut(function() {
+        $(this).remove();
+      });
+    }
+  }
+});
+```
+<%= caption "client/templates/application/layout.js" %>
+
+<%= gifscreenshot "14-6", "Transitioning in-between pages with a fade" %>
+
+<%= commit "14-3", "Transition between pages by fading." %>
+
+เราก็ได้เห็นวิธีการทำแอนิเมชั่นให้กับส่วนประกอบแอพ Meteor ของคุณกันแล้ว ถึงแม้มันจะไม่ได้มีรายละเอียดที่ครบถ้วนทั้งหมด เราก็หวังว่าคุณจะใช้มันเป็นพื้นฐานในการสร้างแอนิเมชั่นที่ซับซ้อนยิ่งขึ้นได้
